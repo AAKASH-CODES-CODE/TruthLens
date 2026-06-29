@@ -885,6 +885,52 @@ async function startURLAnalysis(url) {
     }
 }
 
+async function autoCorrectSpelling(query) {
+    try {
+        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        let responseText;
+
+        if (!isLocalhost || !AppState.azureEndpoint || !AppState.azureKey) {
+            // Live hosted site or no local keys, use Netlify Serverless Function proxy
+            const res = await fetch("/.netlify/functions/correct", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: query })
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            responseText = data.corrected;
+        } else {
+            const response = await fetch(AppState.azureEndpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "api-key": AppState.azureKey
+                },
+                body: JSON.stringify({
+                    messages: [
+                        {
+                            role: "user",
+                            content: `Correct any spelling mistakes or typos in this search term so it works well for a news search engine: '${query}'. Return ONLY the corrected search term. Do not write anything else, no explanations, no quotes.`
+                        }
+                    ],
+                    model: "Llama-3.3-70B-Instruct",
+                    max_tokens: 50,
+                    temperature: 0.1
+                })
+            });
+            if (!response.ok) return null;
+            const data = await response.json();
+            responseText = extractModelText(data);
+        }
+
+        return responseText ? responseText.replace(/['"‘“’”.]/g, "").trim() : null;
+    } catch (e) {
+        console.warn("Spelling auto-correction failed:", e.message);
+        return null;
+    }
+}
+
 async function startNewAnalysis(query) {
     const requestId = ++AppState.activeAnalysisRequestId;
     const normalizedQuery = query.toLowerCase().trim();
@@ -913,8 +959,30 @@ async function startNewAnalysis(query) {
     showLoader("Aggregating global news articles...");
 
     try {
-        const articles = await fetchNewsArticles(query);
+        let articles = await fetchNewsArticles(query);
         if (requestId !== AppState.activeAnalysisRequestId) return;
+
+        if (articles.length === 0) {
+            // Try to auto-correct spelling using Llama AI
+            showLoader("Correcting spelling and retrying search...");
+            const correctedQuery = await autoCorrectSpelling(query);
+            if (requestId !== AppState.activeAnalysisRequestId) return;
+
+            if (correctedQuery && correctedQuery.toLowerCase().trim() !== normalizedQuery) {
+                console.log(`Auto-corrected query from "${query}" to "${correctedQuery}"`);
+                articles = await fetchNewsArticles(correctedQuery);
+                if (requestId !== AppState.activeAnalysisRequestId) return;
+                
+                if (articles.length > 0) {
+                    query = correctedQuery;
+                    updateAnalysisStatusBar(query);
+                }
+            }
+        }
+
+        if (articles.length === 0) {
+            throw new Error(`No news articles found for "${query}". Please check your spelling or try another search term.`);
+        }
 
         AppState.aggregatedArticles = articles;
         renderNewsFeed();
