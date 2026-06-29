@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthLens // Unbiased AI News Aggregator & Fact-Checker</title>
+    <!-- Google Fonts for Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header glass">
+            <div class="header-logo">
+                <span class="logo-icon">👁️</span>
+                <h1 class="logo-text text-glow">Truth<span class="highlight">Lens</span></h1>
+            </div>
+            <div class="header-search">
+                <input type="text" id="search-input" placeholder="Search a trending topic (e.g. climate change, global economics)..." autocomplete="off">
+                <button id="search-btn" class="btn-primary">Analyze Topic</button>
+            </div>
+            <button id="settings-btn" class="btn-secondary" title="Configure API Keys">⚙️ Config API</button>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="dashboard-layout">
+            
+            <!-- Left Panel: Aggregated Articles Source List -->
+            <section class="left-pane glass">
+                <h2 class="section-title">Aggregated News Sources</h2>
+                <p class="section-desc">Real-time coverage articles pulled from multiple global media outlets.</p>
+                <div id="news-feed" class="news-feed-container">
+                    <!-- Default message -->
+                    <div class="empty-state">
+                        <span class="empty-icon">📰</span>
+                        <p>No articles loaded. Search for a topic above to aggregate news sources.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: AI Unbiased Summary & Fact-Check Dashboard -->
+            <section class="right-pane glass">
+                <h2 class="section-title">AI Bias & Fact-Checking Analysis</h2>
+                
+                <!-- Default empty state -->
+                <div id="ai-empty-state" class="empty-state">
+                    <span class="empty-icon">🤖</span>
+                    <p>Enter a topic and click "Analyze" to run the Google Gemini bias classifier and fact-checking report.</p>
+                </div>
+
+                <!-- Analysis results panel (hidden initially) -->
+                <div id="analysis-dashboard" class="dashboard-content hidden">
+                    
+                    <!-- Topic Title & Translation Toggles -->
+                    <div class="analysis-meta">
+                        <h3 id="analysis-topic-title" class="topic-title">Topic: Climate Change</h3>
+                        <div class="translation-controls">
+                            <span class="lang-label">Translate Summary:</span>
+                            <button class="lang-btn active" data-lang="en">EN</button>
+                            <button class="lang-btn" data-lang="hi">हिन्दी</button>
+                            <button class="lang-btn" data-lang="es">ES</button>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid: Bias distribution, Clickbait index -->
+                    <div class="metrics-grid">
+                        
+                        <!-- Political Bias Bar Chart -->
+                        <div class="metric-card glass-inset">
+                            <h4 class="metric-title">Political Bias Distribution</h4>
+                            <div class="bias-bars">
+                                <div class="bias-row">
+                                    <span class="bias-label">Left leaning</span>
+                                    <div class="progress-bar-bg"><div id="bias-left" class="progress-bar bar-left" style="width: 0%"></div></div>
+                                    <span class="bias-val" id="bias-left-val">0%</span>
+                                </div>
+                                <div class="bias-row">
+                                    <span class="bias-label">Neutral / Center</span>
+                                    <div class="progress-bar-bg"><div id="bias-center" class="progress-bar bar-center" style="width: 0%"></div></div>
+                                    <span class="bias-val" id="bias-center-val">0%</span>
+                                </div>
+                                <div class="bias-row">
+                                    <span class="bias-label">Right leaning</span>
+                                    <div class="progress-bar-bg"><div id="bias-right" class="progress-bar bar-right" style="width: 0%"></div></div>
+                                    <span class="bias-val" id="bias-right-val">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clickbait and Emotional Charge Index -->
+                        <div class="metric-card glass-inset flex-center">
+                            <h4 class="metric-title">Sensationalism (Clickbait) Index</h4>
+                            <div class="radial-gauge-container">
+                                <div class="gauge-value" id="sensationalism-val">0%</div>
+                                <div class="gauge-label" id="sensationalism-desc">Analysing...</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- AI Unbiased Summary (Markdown container) -->
+                    <div class="summary-card glass-inset">
+                        <div class="card-header-row">
+                            <h4 class="metric-title">The Unbiased Truth (AI Summary)</h4>
+                            <button id="speak-btn" class="btn-audio" title="Listen to Summary">🔊 Read Aloud</button>
+                        </div>
+                        <div id="unbiased-summary-content" class="summary-body">
+                            <!-- Bullet points go here -->
+                        </div>
+                    </div>
+
+                    <!-- Fact-Check Claims Table -->
+                    <div class="fact-check-card glass-inset">
+                        <h4 class="metric-title">Fact-Checked Claims Database</h4>
+                        <div class="table-container">
+                            <table class="fact-table">
+                                <thead>
+                                    <tr>
+                                        <th>Claim Reported</th>
+                                        <th>Reported By</th>
+                                        <th>AI Verdict</th>
+                                        <th>Fact-Check Analysis</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fact-check-rows">
+                                    <!-- Rows added dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+
+        <!-- API Settings Configuration Modal -->
+        <div id="settings-modal" class="modal-overlay hidden">
+            <div class="modal-content glass">
+                <div class="modal-header">
+                    <h3>⚙️ Configure API Credentials</h3>
+                    <button id="close-modal-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-desc">
+                        TruthLens requires keys for **NewsAPI** (to search articles) and **Azure AI Studio** (to perform Llama-3.3-70B analysis). Keys are stored locally in your browser and never sent to any third party.
+                    </p>
+                    
+                    <div class="input-group">
+                        <label for="azure-endpoint-input">Azure Endpoint URL:</label>
+                        <input type="text" id="azure-endpoint-input" placeholder="https://.../openai/v1/chat/completions">
+                        <small>Copy the Target URI from your Azure AI Studio deployment.</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="azure-key-input">Azure API Key:</label>
+                        <input type="password" id="azure-key-input" placeholder="BPcPvL...">
+                        <small>Copy Key 1 from your Azure AI Studio deployment.</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="news-key-input">NewsAPI Key:</label>
+                        <input type="password" id="news-key-input" placeholder="8b5c9...">
+                        <small>Get a free key from <a href="https://newsapi.org/" target="_blank" rel="noreferrer">NewsAPI.org</a>.</small>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button id="save-keys-btn" class="btn-primary">Save API Credentials</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Loader Overlay -->
+        <div id="global-loader" class="loader-overlay hidden">
+            <div class="loader-content">
+                <div class="spinner"></div>
+                <p id="loader-message">Aggregating global news articles...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Main Logic Script -->
+    <script src="app.js"></script>
+</body>
+</html>
