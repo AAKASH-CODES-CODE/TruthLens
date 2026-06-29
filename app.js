@@ -867,6 +867,14 @@ async function startURLAnalysis(url) {
         setInputMode("followup");
         updateAnalysisStatusBar(topicLabel);
 
+        // Smooth scroll to results on mobile / tablet screens
+        const statusBar = document.getElementById("analysis-status-bar");
+        if (statusBar) {
+            setTimeout(() => {
+                statusBar.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 300);
+        }
+
         // Save to persistent history
         const summaryText = (analysisResult.summary || analysisResult.summary_en || [])[0] || "";
         saveToHistory(url, AppState.chatHistory, summaryText, analysisResult, AppState.aggregatedArticles);
@@ -1001,6 +1009,14 @@ async function startNewAnalysis(query) {
 
         setInputMode("followup");
         updateAnalysisStatusBar(query);
+
+        // Smooth scroll to results on mobile / tablet screens
+        const statusBar = document.getElementById("analysis-status-bar");
+        if (statusBar) {
+            setTimeout(() => {
+                statusBar.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 300);
+        }
 
         // Save to persistent history
         const summaryText = (analysisResult.summary || analysisResult.summary_en || [])[0] || "";
@@ -1902,6 +1918,14 @@ window.loadFromHistory = function(idx) {
         }
         setInputMode("followup");
         updateAnalysisStatusBar(entry.topic);
+
+        // Smooth scroll to results on mobile / tablet screens
+        const statusBar = document.getElementById("analysis-status-bar");
+        if (statusBar) {
+            setTimeout(() => {
+                statusBar.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 300);
+        }
     } else {
         // Fallback: rerun if no analysisResult was saved previously
         if (searchInput) searchInput.value = entry.topic;

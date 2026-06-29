@@ -2827,37 +2827,44 @@ body::before,
 }
 
 @media screen and (max-width: 1024px) {
-    /* Stack sidebars and center pane vertically */
+    /* Prevent nested scroll conflicts by making layout visible and let body scroll */
     .dashboard-layout {
         grid-template-columns: 1fr !important;
-        overflow-y: auto !important;
+        overflow: visible !important;
         height: auto !important;
     }
     
     .app-container {
         height: auto !important;
         min-height: 100vh !important;
-        overflow-y: auto !important;
+        overflow: visible !important;
     }
     
     body {
         overflow-y: auto !important;
+        overflow-x: hidden !important;
     }
 
     /* Set ordering so main center content is at the top of the mobile screen */
-    .left-sidebar {
-        order: 2 !important;
-        max-height: 500px !important;
-    }
-    
     .center-content {
         order: 1 !important;
         padding: 16px !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    .left-sidebar {
+        order: 2 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        height: auto !important;
     }
     
     .right-sidebar {
         order: 3 !important;
-        max-height: 400px !important;
+        max-height: none !important;
+        overflow: visible !important;
+        height: auto !important;
     }
     
     /* Metrics stack on tablets/mobiles */
