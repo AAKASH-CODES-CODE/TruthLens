@@ -6,7 +6,7 @@ exports.handler = async function(event, context) {
   const query = event.queryStringParameters.q || "latest global news";
   
   // Support comma-separated keys for failover
-  const rawKeys = process.env.NEWS_API_KEY || "d44500733be34dcb9cbb03e52c6b0def,41c1de81149f4e138b4e85814359478c";
+  const rawKeys = process.env.NEWS_API_KEY || "";
   const apiKeys = rawKeys.split(",").map(k => k.trim()).filter(Boolean);
 
   if (apiKeys.length === 0) {

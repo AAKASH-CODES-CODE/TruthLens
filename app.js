@@ -29,9 +29,9 @@ try {
 
 // 1. App State (Prefilled with your active keys for instant out-of-the-box demo!)
 const AppState = {
-    azureEndpoint: "https://fakeakash07-6449-resource.services.ai.azure.com/openai/v1/chat/completions",
-    azureKey: "BPcPvLry9IijTquY8soifOdlWHXfg93tkIQ7SrAoiEYZthWHIfKkJQQJ99CFACHYHv6XJ3w3AAAAACOGZEu5",
-    newsKey: "d44500733be34dcb9cbb03e52c6b0def",
+    azureEndpoint: "",
+    azureKey: "",
+    newsKey: "",
     activeTopic: "",
     activeLanguage: "en",
     inputMode: "analyze",
@@ -1140,10 +1140,7 @@ async function fetchNewsArticles(query) {
     }
 
     // Secondary backup keys
-    const backupKeys = [
-        "d44500733be34dcb9cbb03e52c6b0def",
-        "41c1de81149f4e138b4e85814359478c"
-    ];
+    const backupKeys = [];
 
     const requestPromise = (async () => {
         let response;
