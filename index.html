@@ -24,7 +24,6 @@
                 <input type="text" id="search-input" placeholder="Search a trending topic (e.g. climate change, global economics)..." autocomplete="off">
                 <button id="search-btn" class="btn-primary">Analyze Topic</button>
             </div>
-            <button id="settings-btn" class="btn-secondary" title="Configure API Keys">⚙️ Config API</button>
         </header>
 
         <!-- Main Content Area -->
@@ -67,37 +66,63 @@
                         </div>
                     </div>
 
-                    <!-- Metrics Grid: Bias distribution, Clickbait index -->
+                    <!-- Metrics Grid: Bias distribution, Clickbait index, Sentiment Index -->
                     <div class="metrics-grid">
                         
-                        <!-- Political Bias Bar Chart -->
+                        <!-- Political Bias Card -->
                         <div class="metric-card glass-inset">
                             <h4 class="metric-title">Political Bias Distribution</h4>
-                            <div class="bias-bars">
-                                <div class="bias-row">
-                                    <span class="bias-label">Left leaning</span>
-                                    <div class="progress-bar-bg"><div id="bias-left" class="progress-bar bar-left" style="width: 0%"></div></div>
-                                    <span class="bias-val" id="bias-left-val">0%</span>
+                            <div class="bias-content-wrapper">
+                                <div class="bias-bars">
+                                    <div class="bias-row">
+                                        <span class="bias-label">Left leaning</span>
+                                        <div class="progress-bar-bg"><div id="bias-left" class="progress-bar bar-left" style="width: 0%"></div></div>
+                                        <span class="bias-val" id="bias-left-val">0%</span>
+                                    </div>
+                                    <div class="bias-row">
+                                        <span class="bias-label">Neutral / Center</span>
+                                        <div class="progress-bar-bg"><div id="bias-center" class="progress-bar bar-center" style="width: 0%"></div></div>
+                                        <span class="bias-val" id="bias-center-val">0%</span>
+                                    </div>
+                                    <div class="bias-row">
+                                        <span class="bias-label">Right leaning</span>
+                                        <div class="progress-bar-bg"><div id="bias-right" class="progress-bar bar-right" style="width: 0%"></div></div>
+                                        <span class="bias-val" id="bias-right-val">0%</span>
+                                    </div>
                                 </div>
-                                <div class="bias-row">
-                                    <span class="bias-label">Neutral / Center</span>
-                                    <div class="progress-bar-bg"><div id="bias-center" class="progress-bar bar-center" style="width: 0%"></div></div>
-                                    <span class="bias-val" id="bias-center-val">0%</span>
-                                </div>
-                                <div class="bias-row">
-                                    <span class="bias-label">Right leaning</span>
-                                    <div class="progress-bar-bg"><div id="bias-right" class="progress-bar bar-right" style="width: 0%"></div></div>
-                                    <span class="bias-val" id="bias-right-val">0%</span>
+                                <div class="bias-chart-container">
+                                    <svg class="donut-chart" viewBox="0 0 100 100" width="90" height="90">
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255,255,255,0.08)" stroke-width="12"></circle>
+                                        <circle id="donut-left" cx="50" cy="50" r="40" fill="transparent" stroke="#f43f5e" stroke-width="12" stroke-dasharray="0 251.2" stroke-dashoffset="0" transform="rotate(-90 50 50)"></circle>
+                                        <circle id="donut-center" cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" stroke-width="12" stroke-dasharray="0 251.2" stroke-dashoffset="0" transform="rotate(-90 50 50)"></circle>
+                                        <circle id="donut-right" cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" stroke-width="12" stroke-dasharray="0 251.2" stroke-dashoffset="0" transform="rotate(-90 50 50)"></circle>
+                                    </svg>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Clickbait and Emotional Charge Index -->
                         <div class="metric-card glass-inset flex-center">
-                            <h4 class="metric-title">Sensationalism (Clickbait) Index</h4>
+                            <h4 class="metric-title">Sensationalism Index</h4>
                             <div class="radial-gauge-container">
                                 <div class="gauge-value" id="sensationalism-val">0%</div>
                                 <div class="gauge-label" id="sensationalism-desc">Analysing...</div>
+                            </div>
+                        </div>
+
+                        <!-- Sentiment Score and Tone Index -->
+                        <div class="metric-card glass-inset flex-center">
+                            <h4 class="metric-title">Sentiment & Tone Index</h4>
+                            <div class="sentiment-meter-container">
+                                <div class="sentiment-score" id="sentiment-score-val">Neutral</div>
+                                <div class="sentiment-bar-bg">
+                                    <div id="sentiment-indicator" class="sentiment-indicator" style="left: 50%"></div>
+                                </div>
+                                <div class="sentiment-labels">
+                                    <span>Negative</span>
+                                    <span>Neutral</span>
+                                    <span>Positive</span>
+                                </div>
                             </div>
                         </div>
 
@@ -107,7 +132,10 @@
                     <div class="summary-card glass-inset">
                         <div class="card-header-row">
                             <h4 class="metric-title">The Unbiased Truth (AI Summary)</h4>
-                            <button id="speak-btn" class="btn-audio" title="Listen to Summary">🔊 Read Aloud</button>
+                            <div class="action-buttons">
+                                <button id="speak-btn" class="btn-audio" title="Listen to Summary">🔊 Read Aloud</button>
+                                <button id="export-btn" class="btn-export" title="Export Analysis Report">📥 Export Report</button>
+                            </div>
                         </div>
                         <div id="unbiased-summary-content" class="summary-body">
                             <!-- Bullet points go here -->
@@ -131,6 +159,15 @@
                                     <!-- Rows added dynamically -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Source Reliability Ratings Grid -->
+                    <div class="source-reliability-card glass-inset">
+                        <h4 class="metric-title">🔍 Source Reliability & Bias Ledger</h4>
+                        <div class="sources-grid" id="sources-reliability-grid">
+                            <!-- Populated dynamically -->
+                            <div class="empty-sources-message">No source ratings generated yet.</div>
                         </div>
                     </div>
 

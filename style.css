@@ -337,7 +337,7 @@ body {
 /* Metrics Grid layout */
 .metrics-grid {
     display: grid;
-    grid-template-columns: 1.8fr 1fr;
+    grid-template-columns: 2.2fr 1fr 1fr;
     gap: 20px;
 }
 
@@ -355,8 +355,16 @@ body {
     text-transform: uppercase;
 }
 
+.bias-content-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
 /* Bias Progress bars */
 .bias-bars {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -364,7 +372,7 @@ body {
 
 .bias-row {
     display: grid;
-    grid-template-columns: 110px 1fr 45px;
+    grid-template-columns: 100px 1fr 45px;
     align-items: center;
     gap: 15px;
 }
@@ -762,4 +770,171 @@ body {
         height: auto;
         overflow-y: auto;
     }
+}
+
+/* SVG Donut Chart */
+.bias-chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 90px;
+    height: 90px;
+}
+
+.donut-chart circle {
+    transition: stroke-dasharray 0.8s ease-out, stroke-dashoffset 0.8s ease-out;
+}
+
+/* Sentiment Tone Meter */
+.sentiment-meter-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.sentiment-score {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    color: var(--primary);
+    text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.sentiment-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    position: relative;
+    margin-bottom: 8px;
+    overflow: visible;
+}
+
+.sentiment-indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 8px var(--primary);
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: left 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.sentiment-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+/* Source Reliability ledger */
+.source-reliability-card {
+    padding: 24px;
+    margin-top: 10px;
+}
+
+.sources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.source-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 15px;
+    transition: all 0.2s ease;
+}
+
+.source-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.source-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+    padding-bottom: 8px;
+}
+
+.source-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.reliability-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+
+.reliability-label {
+    color: var(--text-muted);
+}
+
+.reliability-val {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.bias-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.bias-left-badge { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
+.bias-center-badge { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.bias-right-badge { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+.empty-sources-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 20px;
+}
+
+/* Action Buttons styling */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-export {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-export:hover {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
 }
