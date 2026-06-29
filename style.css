@@ -2826,6 +2826,81 @@ body::before,
     }
 }
 
+@media screen and (max-width: 1024px) {
+    /* Stack sidebars and center pane vertically */
+    .dashboard-layout {
+        grid-template-columns: 1fr !important;
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+    
+    .app-container {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-y: auto !important;
+    }
+    
+    body {
+        overflow-y: auto !important;
+    }
+
+    /* Set ordering so main center content is at the top of the mobile screen */
+    .left-sidebar {
+        order: 2 !important;
+        max-height: 500px !important;
+    }
+    
+    .center-content {
+        order: 1 !important;
+        padding: 16px !important;
+    }
+    
+    .right-sidebar {
+        order: 3 !important;
+        max-height: 400px !important;
+    }
+    
+    /* Metrics stack on tablets/mobiles */
+    .metrics-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Adjust welcome container vertical margins */
+    .welcome-container {
+        margin-top: 4vh !important;
+    }
+    
+    .welcome-text {
+        font-size: 28px !important;
+    }
+}
+
+@media screen and (max-width: 580px) {
+    .app-header {
+        flex-direction: column !important;
+        gap: 12px !important;
+        align-items: center !important;
+        padding: 12px 6px !important;
+    }
+    
+    .header-nav {
+        width: 100% !important;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+    
+    .nav-pill-btn {
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+    }
+    
+    .history-drawer {
+        width: calc(100vw - 32px) !important;
+        right: 16px !important;
+        top: 100px !important;
+    }
+}
+
 @media screen and (max-width: 480px) {
     .google-login-btn,
     .judge-login-btn {
