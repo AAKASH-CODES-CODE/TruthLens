@@ -629,19 +629,19 @@ You must return a JSON object (strictly raw JSON, do NOT wrap it in markdown cod
   "sentiment": <integer_sentiment_score_from_-100_to_100>,
   "sentimentDesc": "<Positive or Negative or Neutral>",
   "summary_en": [
-    "An extremely detailed, complete, and exhaustive summary of the major event reported (at least 4-5 long sentences packed with specific facts, dates, figures, and statistical data). Give a deep explanation of what happened.",
-    "A comprehensive bullet point explaining the primary arguments, arguments, and data presented by left-leaning, environmentalist or progressive sources (at least 4-5 long sentences containing key quotes, facts, and policy stances).",
-    "A comprehensive bullet point explaining the primary arguments, business impacts, and data presented by right-leaning, conservative or financial sources (at least 4-5 long sentences containing key quotes, industry impacts, and economic stances)."
+    "A concise, detailed summary of the major event reported (2-3 sentences packed with specific facts and figures). Give a clear explanation of what happened.",
+    "A concise bullet point explaining the primary arguments and data presented by left-leaning or progressive sources (2-3 sentences).",
+    "A concise bullet point explaining the primary arguments and data presented by right-leaning or conservative sources (2-3 sentences)."
   ],
   "summary_hi": [
-    "मुख्य घटना का एक अत्यंत विस्तृत, पूर्ण और संपूर्ण सारांश (कम से कम 4-5 लंबे वाक्य जिसमें विशिष्ट तथ्य, तारीखें, आंकड़े और सांख्यिकीय डेटा शामिल हों)। क्या हुआ, इसका गहरा विश्लेषण प्रदान करें।",
-    "वामपंथी, पर्यावरणविद् या प्रगतिशील स्रोतों द्वारा प्रस्तुत प्राथमिक तर्कों, दृष्टिकोणों और डेटा को समझाने वाला एक व्यापक बिंदु (कम से कम 4-5 लंबे वाक्य जिसमें नीतिगत रुख और मुख्य तर्क शामिल हों)।",
-    "दक्षिणपंथी, रूढ़िवादी या वित्तीय स्रोतों द्वारा प्रस्तुत प्राथमिक व्यावसायिक तर्कों, औद्योगिक प्रभावों और डेटा को समझाने वाला एक व्यापक बिंदु (कम से कम 4-5 लंबे वाक्य जिसमें आर्थिक रुख और प्रभाव शामिल हों)।"
+    "मुख्य घटना का एक संक्षिप्त और विस्तृत सारांश (2-3 वाक्य जिसमें विशिष्ट तथ्य और आंकड़े शामिल हों)। क्या हुआ, इसका स्पष्ट विश्लेषण प्रदान करें।",
+    "वामपंथी या प्रगतिशील स्रोतों द्वारा प्रस्तुत प्राथमिक तर्कों को समझाने वाला एक संक्षिप्त बिंदु (2-3 वाक्य)।",
+    "दक्षिणपंथी या रूढ़िवादी स्रोतों द्वारा प्रस्तुत प्राथमिक व्यावसायिक तर्कों को समझाने वाला एक संक्षिप्त बिंदु (2-3 वाक्य)।"
   ],
   "summary_es": [
-    "Un resumen extremadamente detallado, completo y exhaustivo del evento principal reportado (al menos 4-5 frases largas repletas de hechos específicos, fechas, cifras y datos estadísticos). Brinde una explicación profunda de lo sucedido.",
-    "Un punto completo que explique los argumentos principales y los datos presentados por fuentes progresistas o ecologistas (al menos 4-5 frases largas que contengan citas clave, hechos y posturas políticas).",
-    "Un punto completo que explique los argumentos principales, los impactos comerciales y los datos presentados por fuentes conservadoras o financieras (al menos 4-5 frases largas que contengan impactos industriales y posturas económicas)."
+    "Un resumen conciso y detallado del evento principal reportado (2-3 frases repletas de hechos y cifras). Brinde una explicación clara de lo sucedido.",
+    "Un punto conciso que explique los argumentos principales presentados por fuentes progresistas (2-3 frases).",
+    "Un punto conciso que explique los argumentos principales presentados por fuentes conservadoras (2-3 frases)."
   ],
   "claims": [
     {
@@ -692,7 +692,7 @@ Make sure left + center + right in the bias object sum to exactly 100.
                             }
                         ],
                         model: "Llama-3.3-70B-Instruct",
-                        max_tokens: 2000,
+                        max_tokens: 3000,
                         temperature: 0.1
                     })
                 });
