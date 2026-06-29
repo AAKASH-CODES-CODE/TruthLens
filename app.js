@@ -629,6 +629,19 @@ function extractYouTubeVideoId(url) {
 }
 
 async function fetchHtmlFromURL(url) {
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+    if (!isLocalhost) {
+        // Use our secure server-side scrape function on live Netlify domain to bypass CORS/403/Blocks completely
+        const scrapeUrl = `/.netlify/functions/scrape?url=${encodeURIComponent(url)}`;
+        const res = await fetch(scrapeUrl);
+        if (!res.ok) {
+            throw new Error(`Scraper failed to load page content. Netlify proxy returned status ${res.status}`);
+        }
+        return await res.text();
+    }
+
+    // Local fallback using public CORS proxies (when testing on localhost)
     let lastError = null;
 
     // 1. Try corsproxy.io (direct, very fast)
