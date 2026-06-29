@@ -1,0 +1,96 @@
+{
+  "climate change": {
+    "bias": { "left": 40, "center": 50, "right": 10 },
+    "sensationalism": 35,
+    "sensationalismDesc": "Moderate Clickbait",
+    "sentiment": 15,
+    "sentimentDesc": "Neutral",
+    "summary_en": [
+      "GLOBAL EVENT OVERVIEW: The United Nations Intergovernmental Panel on Climate Change (IPCC) has released a comprehensive synthesis report confirming that global mean surface temperatures have risen by approximately 1.1°C relative to pre-industrial baselines. This warming trend, driven primarily by carbon dioxide emissions that reached record highs in recent years, has increased the frequency and severity of heatwaves, droughts, floods, and other extreme weather events across multiple regions.",
+      "PROGRESSIVE & ENVIRONMENTALIST STANCE: Environmental groups argue that current government policies remain far below what is needed to keep warming within the Paris Agreement target. They emphasize stronger emissions cuts, reduced fossil fuel subsidies, and accelerated renewable deployment while warning that delays disproportionately affect vulnerable populations and climate-sensitive regions.",
+      "ECONOMIC & INDUSTRY STANCE: Conservative and industry-aligned sources argue that the transition must be paced carefully to avoid inflation, grid instability, and industrial disruption. They highlight the continued importance of energy security, transitional fuels, nuclear power, and carbon capture technologies while warning against abrupt policy shifts that may damage manufacturing and employment."
+    ],
+    "summary_hi": [],
+    "summary_es": [],
+    "claims": [
+      {
+        "claim": "Global temperature has risen by roughly 1.1°C compared to pre-industrial levels.",
+        "reportedBy": "Independent Science Review",
+        "verdict": "true",
+        "analysis": "Scientific consensus broadly supports that the planet has warmed by around this level relative to pre-industrial baselines."
+      },
+      {
+        "claim": "Current carbon reduction policies are fully aligned with the 1.5°C target.",
+        "reportedBy": "Daily Gazette Agency",
+        "verdict": "false",
+        "analysis": "Most international assessments conclude current national pledges still fall short of the 1.5°C pathway."
+      }
+    ],
+    "sources": [
+      { "source": "Independent Science Review", "bias": "center", "reliability": "High", "reason": "Peer-reviewed publication using transparent scientific methods." },
+      { "source": "Daily Gazette Agency", "bias": "center", "reliability": "High", "reason": "Established general-news wire with editorial review." },
+      { "source": "Econ-Green Voice", "bias": "left", "reliability": "Mixed", "reason": "Advocacy framing is useful but not always neutral." },
+      { "source": "Business Standard Post", "bias": "right", "reliability": "High", "reason": "Strong business coverage with generally reliable market reporting." }
+    ]
+  },
+  "global inflation": {
+    "bias": { "left": 20, "center": 60, "right": 20 },
+    "sensationalism": 40,
+    "sensationalismDesc": "Moderate Clickbait",
+    "sentiment": -45,
+    "sentimentDesc": "Negative",
+    "summary_en": [
+      "GLOBAL FINANCIAL OVERVIEW: Central banks in major economies report that headline inflation has cooled from post-pandemic peaks, but core inflation remains sticky in several regions. Policymakers continue to balance price stability with recession risk, while households still feel pressure from elevated food, housing, and service costs.",
+      "CONSUMER & LABOR STANCE: Consumer groups and labor advocates argue that even if inflation is slowing, cumulative price increases have already strained household budgets. They focus on rent, utilities, groceries, and wage stagnation, and they support stronger worker protections, temporary price controls, or targeted relief for lower-income families.",
+      "FINANCIAL & CAPITAL STANCE: Financial institutions and business groups emphasize the cost of high interest rates, warning that elevated borrowing costs suppress investment, expansion, and hiring. They argue for a more cautious monetary path and say supply-chain normalization and productivity gains can do more to reduce inflation sustainably."
+    ],
+    "summary_hi": [],
+    "summary_es": [],
+    "claims": [
+      {
+        "claim": "Inflation rates have already returned to pre-pandemic target levels everywhere.",
+        "reportedBy": "Business Standard Post",
+        "verdict": "false",
+        "analysis": "Inflation has cooled in many economies, but several regions still remain above target ranges."
+      },
+      {
+        "claim": "Household energy price pressure has eased in some markets compared with peak levels.",
+        "reportedBy": "Daily Gazette Agency",
+        "verdict": "true",
+        "analysis": "Energy prices have moderated in multiple markets, though affordability remains uneven across households."
+      }
+    ],
+    "sources": [
+      { "source": "Business Standard Post", "bias": "right", "reliability": "High", "reason": "Strong financial and policy coverage." },
+      { "source": "Daily Gazette Agency", "bias": "center", "reliability": "High", "reason": "Uses official data releases and broad market reporting." },
+      { "source": "Global Times News", "bias": "left", "reliability": "Mixed", "reason": "Can include ideological framing in economic coverage." }
+    ]
+  },
+  "artificial intelligence": {
+    "bias": { "left": 30, "center": 50, "right": 20 },
+    "sensationalism": 55,
+    "sensationalismDesc": "High Clickbait",
+    "sentiment": 30,
+    "sentimentDesc": "Positive",
+    "summary_en": [
+      "GLOBAL TECHNOLOGY TRANSFORMATION: Generative AI adoption has accelerated across software, media, education, analytics, and enterprise workflows. Organizations report productivity gains in drafting, coding assistance, search, and automation, but concerns remain around accuracy, misuse, displacement risk, and concentration of power among large model providers.",
+      "REGULATORY & SAFETY ADVOCACY: Regulators and public-interest groups are pushing for stronger transparency, copyright protections, safety testing, and rules around synthetic media. They argue that training data practices, model misuse, and disinformation risks require enforceable governance rather than voluntary promises alone.",
+      "BUSINESS & INDUSTRY OUTLOOK: Technology firms and investors argue that AI is a general-purpose productivity tool that can expand economic output, create new high-skill roles, and improve access to services. They warn that excessive regulation may slow innovation and entrench incumbents rather than helping smaller builders or users."
+    ],
+    "summary_hi": [],
+    "summary_es": [],
+    "claims": [
+      {
+        "claim": "AI will fully replace all software developers next year.",
+        "reportedBy": "Global Times News",
+        "verdict": "false",
+        "analysis": "Current evidence suggests AI acts more as an accelerator and co-pilot than a full replacement for complex engineering work."
+      }
+    ],
+    "sources": [
+      { "source": "Global Times News", "bias": "left", "reliability": "Mixed", "reason": "Tends to overstate fast-moving technology claims." },
+      { "source": "Independent Science Review", "bias": "center", "reliability": "High", "reason": "Research-grounded reporting and methodology." },
+      { "source": "Business Standard Post", "bias": "right", "reliability": "High", "reason": "Reliable business and investment coverage." }
+    ]
+  }
+}
