@@ -976,8 +976,9 @@ async function fetchNewsArticles(query) {
 
     const requestPromise = (async () => {
         let response;
-        if (!AppState.newsKey) {
-            // No local key configured, try Netlify Serverless Function fallback
+        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        if (!isLocalhost || !AppState.newsKey) {
+            // Live hosted site or no local key, use Netlify Serverless Function proxy
             const functionUrl = `/.netlify/functions/news?q=${encodeURIComponent(query)}`;
             response = await fetch(functionUrl);
             if (!response.ok) {
@@ -985,7 +986,7 @@ async function fetchNewsArticles(query) {
             }
             return await response.json();
         } else {
-            // Direct browser fetch
+            // Direct browser fetch (allowed only on localhost)
             const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=6&sortBy=relevancy&language=en&apiKey=${AppState.newsKey}`;
             response = await fetch(url);
             if (!response.ok) {
@@ -1067,8 +1068,9 @@ async function runAIAnalysis(normalizedTopic, topicLabel, articles) {
     const requestPromise = (async () => {
         let responseText;
 
-        if (!AppState.azureEndpoint || !AppState.azureKey) {
-            // No local keys configured, try Netlify Serverless Function fallback
+        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        if (!isLocalhost || !AppState.azureEndpoint || !AppState.azureKey) {
+            // Live hosted site or no local keys, use Netlify Serverless Function proxy
             const res = await fetch("/.netlify/functions/analyze", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -2097,8 +2099,9 @@ async function fetchFollowUpAnswer(question) {
     const langNameMap = { "en": "English", "hi": "Hindi", "es": "Spanish" };
     const activeLangName = langNameMap[AppState.activeLanguage] || "English";
 
-    if (!AppState.azureEndpoint || !AppState.azureKey) {
-        // No local keys configured, try Netlify Serverless Function fallback
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (!isLocalhost || !AppState.azureEndpoint || !AppState.azureKey) {
+        // Live hosted site or no local keys, use Netlify Serverless Function proxy
         const response = await fetch("/.netlify/functions/followup", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
