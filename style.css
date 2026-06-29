@@ -281,12 +281,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, color 0.2s ease;
+    will-change: transform;
 }
 
 .capsule-icon-btn:hover {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-main);
+    transform: scale(1.08);
 }
 
 .btn-plus-icon {
@@ -349,14 +351,16 @@ body {
     border-radius: 16px;
     padding: 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
     flex-shrink: 0;
+    will-change: transform;
 }
 
 .news-card:hover {
     background: rgba(255, 255, 255, 0.04);
     border-color: var(--primary);
-    transform: translateY(-2px);
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
 }
 
 .news-card-header {
@@ -2260,8 +2264,8 @@ body::before,
 
 /* ---- History Drawer Styles ---- */
 .app-header {
-    position: relative; /* to anchor the absolute drawer */
-    z-index: 1001; /* Ensure header elements stay above dashboard layouts */
+    position: relative;
+    z-index: 1001;
 }
 
 .history-drawer {
@@ -2829,7 +2833,8 @@ body::before,
 @media screen and (max-width: 1024px) {
     /* Prevent nested scroll conflicts by making layout visible and let body scroll */
     .dashboard-layout {
-        grid-template-columns: 1fr !important;
+        display: flex !important;
+        flex-direction: column !important;
         overflow: visible !important;
         height: auto !important;
     }
@@ -2913,6 +2918,40 @@ body::before,
     .judge-login-btn {
         padding: 14px;
     }
+}
+
+/* Premium Hardware-Accelerated Entry Animations for Dashboard */
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-content:not(.hidden) .metric-card {
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity;
+}
+
+/* Stagger animation delays for metric cards */
+.dashboard-content:not(.hidden) .metric-card:nth-child(1) { animation-delay: 0.05s; }
+.dashboard-content:not(.hidden) .metric-card:nth-child(2) { animation-delay: 0.12s; }
+.dashboard-content:not(.hidden) .metric-card:nth-child(3) { animation-delay: 0.18s; }
+
+.dashboard-content:not(.hidden) .summary-card {
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0.25s;
+    will-change: transform, opacity;
+}
+
+.dashboard-content:not(.hidden) .chat-card {
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0.32s;
+    will-change: transform, opacity;
 }
 
 @media print {

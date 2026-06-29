@@ -4,46 +4,55 @@ exports.handler = async function(event, context) {
   }
 
   const query = event.queryStringParameters.q || "latest global news";
-  const apiKey = process.env.NEWS_API_KEY;
+  
+  // Support comma-separated keys for failover
+  const rawKeys = process.env.NEWS_API_KEY || "d44500733be34dcb9cbb03e52c6b0def,41c1de81149f4e138b4e85814359478c";
+  const apiKeys = rawKeys.split(",").map(k => k.trim()).filter(Boolean);
 
-  if (!apiKey) {
+  if (apiKeys.length === 0) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "NEWS_API_KEY environment variable is not configured in Netlify." })
+      body: JSON.stringify({ error: "No API keys configured." })
     };
   }
 
-  try {
-    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=6&sortBy=relevancy&language=en&apiKey=${apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      return { statusCode: response.status, body: `NewsAPI returned error: ${response.statusText}` };
+  let lastError = null;
+  for (const apiKey of apiKeys) {
+    try {
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=6&sortBy=relevancy&language=en&apiKey=${apiKey}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Status ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.status !== "ok") {
+        throw new Error(data.message || "NewsAPI error");
+      }
+
+      const articles = (data.articles || []).map((art) => ({
+        title: art.title,
+        source: art.source?.name || "Unknown Source",
+        description: art.description || "No description available.",
+        url: art.url
+      }));
+
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        },
+        body: JSON.stringify(articles)
+      };
+    } catch (e) {
+      console.warn(`Key ${apiKey.slice(0, 5)}... failed: ${e.message}`);
+      lastError = e;
     }
-
-    const data = await response.json();
-    if (data.status !== "ok") {
-      return { statusCode: 400, body: JSON.stringify({ error: data.message || "NewsAPI error" }) };
-    }
-
-    const articles = (data.articles || []).map((art) => ({
-      title: art.title,
-      source: art.source?.name || "Unknown Source",
-      description: art.description || "No description available.",
-      url: art.url
-    }));
-
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
-      body: JSON.stringify(articles)
-    };
-  } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
   }
+
+  return {
+    statusCode: 500,
+    body: JSON.stringify({ error: `All news API keys failed. Last error: ${lastError.message}` })
+  };
 };
