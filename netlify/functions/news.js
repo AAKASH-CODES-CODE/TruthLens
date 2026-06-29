@@ -1,0 +1,49 @@
+exports.handler = async function(event, context) {
+  if (event.httpMethod !== "GET") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  const query = event.queryStringParameters.q || "latest global news";
+  const apiKey = process.env.NEWS_API_KEY;
+
+  if (!apiKey) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "NEWS_API_KEY environment variable is not configured in Netlify." })
+    };
+  }
+
+  try {
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=6&sortBy=relevancy&language=en&apiKey=${apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return { statusCode: response.status, body: `NewsAPI returned error: ${response.statusText}` };
+    }
+
+    const data = await response.json();
+    if (data.status !== "ok") {
+      return { statusCode: 400, body: JSON.stringify({ error: data.message || "NewsAPI error" }) };
+    }
+
+    const articles = (data.articles || []).map((art) => ({
+      title: art.title,
+      source: art.source?.name || "Unknown Source",
+      description: art.description || "No description available.",
+      url: art.url
+    }));
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
+      body: JSON.stringify(articles)
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message })
+    };
+  }
+};
