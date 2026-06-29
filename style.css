@@ -350,6 +350,7 @@ body {
     padding: 16px;
     cursor: pointer;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .news-card:hover {
@@ -721,6 +722,8 @@ body {
     border-radius: 16px;
     padding: 14px;
     transition: all 0.2s ease;
+    flex-shrink: 0;
+    cursor: pointer;
 }
 
 .source-item:hover {
@@ -1362,6 +1365,9 @@ body {
 /* Conversational Follow-up Chat Pane */
 .chat-card {
     padding: 24px;
+}
+.chat-card.active {
+    order: -1;
 }
 
 .chat-thread-container {
@@ -2159,4 +2165,41 @@ body::before,
         transition: none !important;
         scroll-behavior: auto !important;
     }
+}
+
+/* Premium Lucide Icon styles */
+.lucide {
+    stroke-width: 2px;
+    vertical-align: middle;
+}
+.nav-icon-svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    stroke-width: 2.2px;
+}
+.hero-badge-svg {
+    width: 13px;
+    height: 13px;
+    margin-right: 6px;
+    stroke-width: 2.5px;
+}
+.metric-icon-svg {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    stroke-width: 2px;
+}
+.btn-icon-svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    stroke-width: 2.2px;
+}
+.modal-header-svg {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    stroke-width: 2px;
+    color: var(--primary);
 }

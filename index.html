@@ -12,6 +12,8 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
@@ -31,10 +33,10 @@
                 </div>
                 <div class="header-nav">
                     <button id="home-nav-btn" class="nav-pill-btn" title="Go Home">
-                        <span class="nav-icon">🏠</span> Home
+                        <i data-lucide="home" class="nav-icon-svg"></i> Home
                     </button>
                     <button id="history-nav-btn" class="nav-pill-btn" title="View Search History">
-                        <span class="nav-icon">⏳</span> History
+                        <i data-lucide="history" class="nav-icon-svg"></i> History
                     </button>
                 </div>
             </div>
@@ -47,7 +49,9 @@
             <aside class="left-sidebar pane">
                 <div class="pane-header-row">
                     <h2 class="pane-title">Daily Feed</h2>
-                    <button id="toggle-filter-btn" class="pane-icon-btn" title="Location Settings">⚙️</button>
+                    <button id="toggle-filter-btn" class="pane-icon-btn" title="Location Settings">
+                        <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </div>
                 <p class="pane-desc">Live news feed for the selected topic. Location filters only affect this feed.</p>
 
@@ -89,9 +93,9 @@
                         fact-checked claims in a richer visual dashboard.
                     </p>
                     <div class="hero-badges">
-                        <span class="hero-badge">🛰️ Live feed aggregation</span>
-                        <span class="hero-badge">📊 Bias + credibility ledger</span>
-                        <span class="hero-badge">🧠 Live Llama summaries</span>
+                        <span class="hero-badge"><i data-lucide="globe" class="hero-badge-svg"></i> Live feed aggregation</span>
+                        <span class="hero-badge"><i data-lucide="bar-chart-2" class="hero-badge-svg"></i> Bias + credibility ledger</span>
+                        <span class="hero-badge"><i data-lucide="brain" class="hero-badge-svg"></i> Live Llama summaries</span>
                     </div>
                 </div>
 
@@ -152,7 +156,7 @@
 
                         <!-- Political Bias Card -->
                         <div class="metric-card panel-inset">
-                            <h4 class="metric-title">📊 Political Bias Distribution</h4>
+                            <h4 class="metric-title"><i data-lucide="bar-chart-2" class="metric-icon-svg"></i> Political Bias Distribution</h4>
                             <div class="bias-content-wrapper">
                                 <div class="bias-bars">
                                     <div class="bias-row">
@@ -198,7 +202,7 @@
 
                         <!-- Clickbait Sensationalism Gauge -->
                         <div class="metric-card panel-inset flex-center">
-                            <h4 class="metric-title">🔥 Sensationalism Index</h4>
+                            <h4 class="metric-title"><i data-lucide="flame" class="metric-icon-svg"></i> Sensationalism Index</h4>
                             <div class="radial-gauge-container">
                                 <svg class="gauge-svg" viewBox="0 0 100 100" width="100" height="100">
                                     <path class="gauge-bg-path" d="M 20 80 A 40 40 0 1 1 80 80" fill="none"
@@ -223,7 +227,7 @@
 
                         <!-- Sentiment Tone Index -->
                         <div class="metric-card panel-inset flex-center">
-                            <h4 class="metric-title">🎭 Sentiment & Tone Index</h4>
+                            <h4 class="metric-title"><i data-lucide="activity" class="metric-icon-svg"></i> Sentiment & Tone Index</h4>
                             <div class="sentiment-meter-container">
                                 <div class="sentiment-score" id="sentiment-score-val">Neutral</div>
                                 <div class="sentiment-bar-bg">
@@ -241,12 +245,10 @@
                     <!-- AI Unbiased Summary (Detailed content) -->
                     <div class="summary-card panel-inset">
                         <div class="card-header-row">
-                            <h4 class="metric-title">🧾 The Unbiased Truth (Live AI Summary)</h4>
+                            <h4 class="metric-title"><i data-lucide="file-text" class="metric-icon-svg"></i> The Unbiased Truth (Live AI Summary)</h4>
                             <div class="action-buttons">
-                                <button id="speak-btn" class="btn-audio" title="Listen to Summary">🔊 Read
-                                    Aloud</button>
-                                <button id="export-btn" class="btn-export" title="Export Analysis Report">📥 Export
-                                    Report</button>
+                                <button id="speak-btn" class="btn-audio" title="Listen to Summary"><i data-lucide="volume-2" class="btn-icon-svg"></i> <span id="speak-btn-text">Read Aloud</span></button>
+                                <button id="export-btn" class="btn-export" title="Export Analysis Report"><i data-lucide="download" class="btn-icon-svg"></i> Export Report</button>
                             </div>
                         </div>
                         <div id="unbiased-summary-content" class="summary-body">
@@ -255,8 +257,8 @@
                     </div>
 
                     <!-- Conversational Follow-up Q&A Card -->
-                    <div class="chat-card panel-inset">
-                        <h4 class="metric-title">💬 Conversational Follow-up Q&A</h4>
+                    <div class="chat-card panel-inset hidden">
+                        <h4 class="metric-title"><i data-lucide="message-square" class="metric-icon-svg"></i> Conversational Follow-up Q&A</h4>
                         <div id="chat-thread" class="chat-thread-container">
                             <div class="chat-placeholder">Ask any follow-up question in the search bar above to start a
                                 conversation about this news topic.</div>
@@ -265,7 +267,7 @@
 
                     <!-- Fact-Check Claims Table -->
                     <div class="fact-check-card panel-inset">
-                        <h4 class="metric-title">🛡️ Fact-Checked Claims Database</h4>
+                        <h4 class="metric-title"><i data-lucide="shield-check" class="metric-icon-svg"></i> Fact-Checked Claims Database</h4>
                         <div class="table-container">
                             <table class="fact-table">
                                 <thead>
@@ -304,7 +306,7 @@
         <div id="settings-modal" class="modal-overlay hidden">
             <div class="modal-content glass">
                 <div class="modal-header">
-                    <h3>⚙️ Configure API Credentials</h3>
+                    <h3><i data-lucide="settings" class="modal-header-svg"></i> Configure API Credentials</h3>
                     <button id="close-modal-btn" class="close-btn">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -343,7 +345,7 @@
         <div id="history-modal" class="modal-overlay hidden">
             <div class="modal-content glass">
                 <div class="modal-header">
-                    <h3>⏳ Search History Logs</h3>
+                    <h3><i data-lucide="history" class="modal-header-svg"></i> Search History Logs</h3>
                     <button id="close-history-btn" class="close-btn">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -369,7 +371,7 @@
     </div>
 
     <!-- Main Logic Script -->
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=17"></script>
 </body>
 
 </html>

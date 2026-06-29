@@ -90,6 +90,7 @@ const historyNavBtn = document.getElementById("history-nav-btn");
 const historyModal = document.getElementById("history-modal");
 const closeHistoryBtn = document.getElementById("close-history-btn");
 const historyListContainer = document.getElementById("history-list-container");
+const chatCard = document.querySelector(".chat-card");
 
 const toggleFilterBtn = document.getElementById("toggle-filter-btn");
 const locationFilterPanel = document.getElementById("location-filter-panel");
@@ -119,6 +120,9 @@ function getGaugeFill() {
 window.addEventListener("DOMContentLoaded", () => {
     loadKeys();
     setInputMode("analyze");
+    if (window.lucide) {
+        lucide.createIcons();
+    }
 
     // Set up Speech Synthesis termination on unload
     window.addEventListener("beforeunload", () => {
@@ -408,6 +412,10 @@ async function startNewAnalysis(query) {
     AppState.chatHistory = [];
     AppState.analysisResult = null;
     AppState.latestRenderedSummaryKey = "";
+    if (chatCard) {
+        chatCard.classList.add("hidden");
+        chatCard.classList.remove("active");
+    }
     setInputMode("analyze");
     updateAnalysisStatusBar(query);
 
@@ -470,14 +478,14 @@ function showLoader(msg) {
     }
 
     const steps = [
-        "🔍 Connecting to global news servers...",
-        "📰 Fetching top articles and editorial coverage...",
-        "🧬 Initiating Llama-3.3-70B classifier pipeline...",
-        "⚖️ Measuring political bias distribution...",
-        "🚫 Evaluating sensationalism & clickbait thresholds...",
-        "📑 Fact-checking primary claims against scientific consensus...",
-        "🔤 Formatting unbiased summary (English/Hindi/Spanish)...",
-        "✨ Finalizing dashboard visualization cards..."
+        "Connecting to global news servers...",
+        "Fetching top articles and editorial coverage...",
+        "Initiating Llama-3.3-70B classifier pipeline...",
+        "Measuring political bias distribution...",
+        "Evaluating sensationalism & clickbait thresholds...",
+        "Fact-checking primary claims against scientific consensus...",
+        "Formatting unbiased summary (English/Hindi/Spanish)...",
+        "Finalizing dashboard visualization cards..."
     ];
 
     let stepIdx = 0;
@@ -489,7 +497,7 @@ function showLoader(msg) {
         if (stepIdx < steps.length) {
             loaderMessage.textContent = steps[stepIdx];
         } else {
-            loaderMessage.textContent = "⚖️ Synthesizing findings...";
+            loaderMessage.textContent = "Synthesizing findings...";
         }
     }, 1200);
 }
@@ -565,10 +573,13 @@ function renderNewsFeed() {
     if (AppState.aggregatedArticles.length === 0) {
         newsFeed.innerHTML = `
             <div class="empty-state">
-                <span class="empty-icon">📰</span>
+                <i data-lucide="newspaper" style="width: 32px; height: 32px; opacity: 0.15; margin-bottom: 10px;"></i>
                 <p>No articles loaded.</p>
             </div>
         `;
+        if (window.lucide) {
+            lucide.createIcons();
+        }
         return;
     }
 
@@ -654,6 +665,7 @@ You must return a JSON object (strictly raw JSON, do NOT wrap it in markdown cod
   "sources": [
     {
       "source": "Source Name (e.g. BBC News)",
+      "url": "Main homepage URL of this news source (e.g. https://www.bbc.com)",
       "bias": "left" or "center" or "right",
       "reliability": "High" or "Mixed" or "Low",
       "reason": "Short reason explaining reliability rating based on facts."
@@ -762,28 +774,50 @@ function renderAnalysisDashboard() {
     const res = AppState.analysisResult;
     if (!res) return;
 
-    biasLeft.style.width = `${res.bias.left}%`;
-    biasLeftVal.textContent = `${res.bias.left}%`;
-    biasCenter.style.width = `${res.bias.center}%`;
-    biasCenterVal.textContent = `${res.bias.center}%`;
-    biasRight.style.width = `${res.bias.right}%`;
-    biasRightVal.textContent = `${res.bias.right}%`;
+    // Reset elements to zero state for animation
+    biasLeft.style.width = "0%";
+    biasLeftVal.textContent = "0%";
+    biasCenter.style.width = "0%";
+    biasCenterVal.textContent = "0%";
+    biasRight.style.width = "0%";
+    biasRightVal.textContent = "0%";
 
-    animateDonutChart(res.bias.left, res.bias.center, res.bias.right);
+    donutLeft.style.strokeDasharray = `0 251.2`;
+    donutCenter.style.strokeDasharray = `0 251.2`;
+    donutRight.style.strokeDasharray = `0 251.2`;
 
-    sensationalismVal.textContent = `${res.sensationalism}%`;
-    sensationalismDesc.textContent = res.sensationalismDesc;
     const gaugeFill = getGaugeFill();
     if (gaugeFill) {
-        const gaugeLength = 188.4;
-        const fillLength = (res.sensationalism / 100) * gaugeLength;
-        gaugeFill.style.strokeDasharray = `${fillLength} 188.4`;
+        gaugeFill.style.strokeDasharray = `0 188.4`;
     }
+    sentimentIndicator.style.left = "50%";
 
-    sentimentScoreVal.textContent = res.sentimentDesc || "Neutral";
-    const scoreVal = res.sentiment !== undefined ? res.sentiment : 0;
-    const percentagePos = ((scoreVal + 100) / 200) * 100;
-    sentimentIndicator.style.left = `${percentagePos}%`;
+    // Trigger transitions via repaint frame
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            biasLeft.style.width = `${res.bias.left}%`;
+            biasLeftVal.textContent = `${res.bias.left}%`;
+            biasCenter.style.width = `${res.bias.center}%`;
+            biasCenterVal.textContent = `${res.bias.center}%`;
+            biasRight.style.width = `${res.bias.right}%`;
+            biasRightVal.textContent = `${res.bias.right}%`;
+
+            animateDonutChart(res.bias.left, res.bias.center, res.bias.right);
+
+            sensationalismVal.textContent = `${res.sensationalism}%`;
+            sensationalismDesc.textContent = res.sensationalismDesc;
+            if (gaugeFill) {
+                const gaugeLength = 188.4;
+                const fillLength = (res.sensationalism / 100) * gaugeLength;
+                gaugeFill.style.strokeDasharray = `${fillLength} 188.4`;
+            }
+
+            sentimentScoreVal.textContent = res.sentimentDesc || "Neutral";
+            const scoreVal = res.sentiment !== undefined ? res.sentiment : 0;
+            const percentagePos = ((scoreVal + 100) / 200) * 100;
+            sentimentIndicator.style.left = `${percentagePos}%`;
+        });
+    });
 
     requestAnimationFrame(() => {
         renderSummarySection();
@@ -934,6 +968,11 @@ function renderSourceReliabilityGrid() {
             <p class="card-desc" style="-webkit-line-clamp: 3; font-size: 11px; margin-top: 5px;">${escapeHTML(src.reason)}</p>
         `;
 
+        item.addEventListener("click", () => {
+            const url = src.url || `https://www.google.com/search?q=${encodeURIComponent(src.source)}`;
+            window.open(url, "_blank");
+        });
+
         fragment.appendChild(item);
     });
 
@@ -967,7 +1006,12 @@ function speakSummary(points) {
 
     AppState.utterance.onstart = () => {
         AppState.isSpeaking = true;
-        speakBtn.textContent = "⏹️ Stop Reading";
+        if (speakBtn) {
+            speakBtn.innerHTML = `<i data-lucide="square" class="btn-icon-svg"></i> Stop Reading`;
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
         speakBtn.classList.add("btn-audio-active");
     };
 
@@ -992,7 +1036,10 @@ function stopSpeaking() {
 function resetSpeakState() {
     AppState.isSpeaking = false;
     if (speakBtn) {
-        speakBtn.textContent = "🔊 Read Aloud";
+        speakBtn.innerHTML = `<i data-lucide="volume-2" class="btn-icon-svg"></i> Read Aloud`;
+        if (window.lucide) {
+            lucide.createIcons();
+        }
         speakBtn.classList.remove("btn-audio-active");
     }
 }
@@ -1039,6 +1086,10 @@ function goHome() {
     AppState.activeTopic = "";
     AppState.analysisResult = null;
     AppState.chatHistory = [];
+    if (chatCard) {
+        chatCard.classList.add("hidden");
+        chatCard.classList.remove("active");
+    }
     setInputMode("analyze");
     updateAnalysisStatusBar();
 
@@ -1465,6 +1516,11 @@ Write a detailed, readable, well-structured answer. Use short paragraphs and bul
 async function submitFollowUp(question) {
     const cleanQ = question.trim();
     if (!cleanQ) return;
+
+    if (chatCard) {
+        chatCard.classList.remove("hidden");
+        chatCard.classList.add("active");
+    }
 
     if (searchInput) searchInput.value = "";
 
