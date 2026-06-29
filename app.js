@@ -1,5 +1,31 @@
 // --- TRUTHLENS CORE CONTROLLER & API INTEGRATION ---
 
+// Firebase Configuration & Initialization
+// Replace these placeholders with your actual Firebase Project Configuration details.
+const firebaseConfig = {
+    apiKey: "AIzaSyB6J69zt3A2hGjtw6DYPseDNm472-l7i9I",
+    authDomain: "truthlens-520d8.firebaseapp.com",
+    projectId: "truthlens-520d8",
+    storageBucket: "truthlens-520d8.firebasestorage.app",
+    messagingSenderId: "455295150754",
+    appId: "1:455295150754:web:fe01e47e806148d0b905fb"
+};
+
+let db = null;
+let isFirebaseEnabled = false;
+
+try {
+    if (window.firebase && firebaseConfig.projectId && !firebaseConfig.projectId.includes("YOUR_PROJECT_ID")) {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        isFirebaseEnabled = true;
+        console.log("Firebase Firestore initialized successfully!");
+    } else {
+        console.warn("Firebase config is default placeholder. Falling back to local storage for search history.");
+    }
+} catch (e) {
+    console.error("Firebase initialization failed:", e);
+}
 
 // 1. App State (Prefilled with your active keys for instant out-of-the-box demo!)
 const AppState = {
@@ -143,20 +169,25 @@ function lockDashboardAccess() {
     if (mainApp) mainApp.classList.add("app-locked");
 }
 
-function unlockDashboardAccess(role) {
+async function unlockDashboardAccess(role) {
     localStorage.setItem(LOGIN_STORAGE_KEY, role);
     if (loginScreen) loginScreen.classList.add("hidden");
     if (mainApp) mainApp.classList.remove("app-locked");
+    
+    // Fetch and sync user-specific history from Firebase Firestore
+    await loadSearchHistory();
+    renderHistoryBadge();
+
     if (window.lucide && typeof lucide.createIcons === "function") {
         lucide.createIcons();
     }
 }
 
 // 3. Initialize App & Load Keys
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
     initializeLoginGate();
     loadKeys();
-    loadSearchHistory();
+    await loadSearchHistory();
     renderHistoryBadge();
     setInputMode("analyze");
     if (window.lucide) {
@@ -1625,7 +1656,20 @@ function goHome() {
 
 // ---- History System ----
 
-function loadSearchHistory() {
+async function loadSearchHistory() {
+    try {
+        const userId = localStorage.getItem(LOGIN_STORAGE_KEY) || "anonymous";
+        if (isFirebaseEnabled && db) {
+            const doc = await db.collection("users").doc(userId).get();
+            if (doc.exists && doc.data().history) {
+                AppState.searchHistory = doc.data().history;
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn("Could not load history from Firebase:", e);
+    }
+
     try {
         const saved = localStorage.getItem("truthlens_history");
         if (saved) AppState.searchHistory = JSON.parse(saved);
@@ -1652,10 +1696,19 @@ function saveToHistory(topic, chatLog, summary, analysisResult, aggregatedArticl
     };
     AppState.searchHistory.unshift(entry); // newest first
     if (AppState.searchHistory.length > 50) AppState.searchHistory.pop(); // cap at 50
+
     try {
         localStorage.setItem("truthlens_history", JSON.stringify(AppState.searchHistory));
     } catch (e) {
-        console.warn("Could not save history:", e);
+        console.warn("Could not save history to localStorage:", e);
+    }
+
+    // Save to Firebase Firestore
+    if (isFirebaseEnabled && db) {
+        const userId = localStorage.getItem(LOGIN_STORAGE_KEY) || "anonymous";
+        db.collection("users").doc(userId).set({
+            history: AppState.searchHistory
+        }).catch(err => console.error("Firebase history sync failed:", err));
     }
     // Update badge count
     renderHistoryBadge();
@@ -1845,6 +1898,15 @@ window.rerunFromHistory = function(idx) {
 window.clearHistory = function() {
     AppState.searchHistory = [];
     try { localStorage.removeItem("truthlens_history"); } catch(e) {}
+
+    // Clear history in Firebase Firestore
+    if (isFirebaseEnabled && db) {
+        const userId = localStorage.getItem(LOGIN_STORAGE_KEY) || "anonymous";
+        db.collection("users").doc(userId).set({
+            history: []
+        }).catch(err => console.error("Firebase history clear failed:", err));
+    }
+
     renderHistoryBadge();
     const drawer = document.getElementById("history-drawer");
     if (drawer) renderHistoryList(drawer);
@@ -2325,6 +2387,14 @@ function updateHistoryChatLog() {
             localStorage.setItem("truthlens_history", JSON.stringify(AppState.searchHistory));
         } catch (e) {
             console.warn("Could not update history chat log:", e);
+        }
+
+        // Update to Firebase Firestore
+        if (isFirebaseEnabled && db) {
+            const userId = localStorage.getItem(LOGIN_STORAGE_KEY) || "anonymous";
+            db.collection("users").doc(userId).set({
+                history: AppState.searchHistory
+            }).catch(err => console.error("Firebase history sync failed:", err));
         }
     }
 }
