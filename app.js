@@ -7,17 +7,19 @@ const AppState = {
     newsKey: "41c1de81149f4e138b4e85814359478c",
     activeTopic: "",
     activeLanguage: "en",
+    location: { country: "", state: "", city: "" }, // Scopes feed locally
     aggregatedArticles: [],
     analysisResult: null, // Stores the rich JSON output from Llama
     isSpeaking: false,
     synth: window.speechSynthesis,
-    utterance: null
+    utterance: null,
+    chatHistory: [] // Stores history list for the conversational follow-up
 };
 
 // 2. DOM Selectors
 const searchInput = document.getElementById("search-input");
-const searchBtn = document.getElementById("search-btn");
-const settingsBtn = document.getElementById("settings-btn");
+const searchBtn = document.getElementById("search-btn"); // Might be null in new layout
+const settingsBtn = document.getElementById("add-key-btn"); // Point to the plus button
 const settingsModal = document.getElementById("settings-modal");
 const closeModalBtn = document.getElementById("close-modal-btn");
 const saveKeysBtn = document.getElementById("save-keys-btn");
@@ -28,9 +30,9 @@ const globalLoader = document.getElementById("global-loader");
 const loaderMessage = document.getElementById("loader-message");
 
 const newsFeed = document.getElementById("news-feed");
-const aiEmptyState = document.getElementById("ai-empty-state");
+const aiEmptyState = document.getElementById("ai-empty-state"); // Might be null in new layout
 const analysisDashboard = document.getElementById("analysis-dashboard");
-const analysisTopicTitle = document.getElementById("analysis-topic-title");
+const analysisTopicTitle = document.getElementById("analysis-topic-title"); // Might be null in new layout
 
 // Metrics elements
 const biasLeft = document.getElementById("bias-left");
@@ -57,6 +59,27 @@ const sourcesReliabilityGrid = document.getElementById("sources-reliability-grid
 const speakBtn = document.getElementById("speak-btn");
 const exportBtn = document.getElementById("export-btn");
 
+const langSelect = document.getElementById("lang-select");
+const micBtn = document.getElementById("mic-btn");
+
+// Navigation & Location elements
+const headerLogoBtn = document.getElementById("header-logo-btn");
+const homeNavBtn = document.getElementById("home-nav-btn");
+const historyNavBtn = document.getElementById("history-nav-btn");
+const historyModal = document.getElementById("history-modal");
+const closeHistoryBtn = document.getElementById("close-history-btn");
+const historyListContainer = document.getElementById("history-list-container");
+
+const toggleFilterBtn = document.getElementById("toggle-filter-btn");
+const locationFilterPanel = document.getElementById("location-filter-panel");
+const countryFilter = document.getElementById("country-filter");
+const stateFilter = document.getElementById("state-filter");
+const cityFilter = document.getElementById("city-filter");
+const applyLocationBtn = document.getElementById("apply-location-btn");
+
+const suggestedQuestions = document.getElementById("suggested-questions");
+const chatThread = document.getElementById("chat-thread");
+
 // 3. Initialize App & Load Keys
 window.addEventListener("DOMContentLoaded", () => {
     loadKeys();
@@ -66,21 +89,64 @@ window.addEventListener("DOMContentLoaded", () => {
         if (AppState.synth) AppState.synth.cancel();
     });
 
-    // Language buttons binding
-    document.querySelectorAll(".lang-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("active"));
-            e.target.classList.add("active");
-            AppState.activeLanguage = e.target.getAttribute("data-lang");
+    // Language dropdown select change binding
+    if (langSelect) {
+        langSelect.addEventListener("change", (e) => {
+            AppState.activeLanguage = e.target.value;
             renderSummarySection();
         });
-    });
+    }
 
     // Export button binding
     if (exportBtn) {
         exportBtn.addEventListener("click", exportAnalysisReport);
     }
+
+    // Voice dictation using Web Speech API
+    initializeVoiceDictation();
+
+    // Home navigation listener
+    if (homeNavBtn) homeNavBtn.addEventListener("click", goHome);
+    if (headerLogoBtn) headerLogoBtn.addEventListener("click", goHome);
+
+    // History navigation listener
+    if (historyNavBtn) historyNavBtn.addEventListener("click", showHistory);
+    if (closeHistoryBtn) closeHistoryBtn.addEventListener("click", () => historyModal.classList.add("hidden"));
+
+    // Toggle location panel
+    if (toggleFilterBtn && locationFilterPanel) {
+        toggleFilterBtn.addEventListener("click", () => {
+            locationFilterPanel.classList.toggle("hidden");
+        });
+    }
+
+    // Apply location filter listener
+    if (applyLocationBtn) {
+        applyLocationBtn.addEventListener("click", () => {
+            AppState.location.country = (countryFilter ? countryFilter.value.trim() : "");
+            AppState.location.state = (stateFilter ? stateFilter.value.trim() : "");
+            AppState.location.city = (cityFilter ? cityFilter.value.trim() : "");
+            
+            // Hide filter drawer after applying
+            if (locationFilterPanel) locationFilterPanel.classList.add("hidden");
+            
+            refreshNewsFeed();
+        });
+    }
+
+    // Load trending articles silently in the background on startup
+    loadInitialTrendingNews();
 });
+
+async function loadInitialTrendingNews() {
+    try {
+        const defaultArticles = await fetchNewsArticles("latest global news");
+        AppState.aggregatedArticles = defaultArticles;
+        renderNewsFeed();
+    } catch (e) {
+        console.warn("Failed to load initial news:", e);
+    }
+}
 
 function loadKeys() {
     // If not set in LocalStorage yet, save the prefilled credentials
@@ -141,9 +207,65 @@ window.addEventListener("click", (e) => {
     }
 });
 
+// Voice dictation initialization helper
+function initializeVoiceDictation() {
+    if (!micBtn || !searchInput) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        console.warn("Web Speech API Recognition is not supported by this browser.");
+        micBtn.style.display = "none";
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    let isListening = false;
+
+    recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.add("mic-active");
+        searchInput.placeholder = "Listening... Speak clearly.";
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.remove("mic-active");
+        searchInput.placeholder = "Ask TruthLens...";
+    };
+
+    recognition.onerror = (e) => {
+        console.error("Speech Recognition error:", e.error);
+        isListening = false;
+        micBtn.classList.remove("mic-active");
+        searchInput.placeholder = "Ask TruthLens...";
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        searchInput.value = transcript;
+        performAnalysis(); // Auto-trigger search analysis!
+    };
+
+    micBtn.addEventListener("click", () => {
+        if (isListening) {
+            recognition.stop();
+        } else {
+            // Set recognition language based on active dropdown select
+            if (AppState.activeLanguage === "hi") recognition.lang = "hi-IN";
+            else if (AppState.activeLanguage === "es") recognition.lang = "es-ES";
+            else recognition.lang = "en-US";
+
+            recognition.start();
+        }
+    });
+}
 
 // 5. Search / Analyze Trigger
-searchBtn.addEventListener("click", performAnalysis);
+if (searchBtn) searchBtn.addEventListener("click", performAnalysis);
 searchInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
         performAnalysis();
@@ -157,6 +279,12 @@ async function performAnalysis() {
         return;
     }
 
+    // If an analysis is already loaded, route inputs as conversational follow-ups!
+    if (AppState.activeTopic) {
+        submitFollowUp(query);
+        return;
+    }
+
     // Stop speaking if active
     stopSpeaking();
 
@@ -164,8 +292,9 @@ async function performAnalysis() {
     showLoader("Aggregating global news articles...");
 
     try {
-        // Step 1: Fetch Articles
-        AppState.aggregatedArticles = await fetchNewsArticles(query);
+        const locationString = buildLocationString();
+        const searchFetchQuery = locationString ? `${query} ${locationString}` : query;
+        AppState.aggregatedArticles = await fetchNewsArticles(searchFetchQuery);
         renderNewsFeed();
 
         // Step 2: Run AI Analysis
@@ -174,6 +303,11 @@ async function performAnalysis() {
 
         // Step 3: Render Dashboard
         renderAnalysisDashboard();
+
+        const centerPane = document.querySelector(".center-content");
+        if (centerPane) {
+            centerPane.classList.add("has-results");
+        }
 
     } catch (e) {
         console.error("Analysis sequence failed:", e);
@@ -619,9 +753,9 @@ function generateMockAnalysis(topic) {
 
 // 8. Render Dashboard Output Elements
 function renderAnalysisDashboard() {
-    aiEmptyState.classList.add("hidden");
-    analysisDashboard.classList.remove("hidden");
-    analysisTopicTitle.textContent = `Topic: ${AppState.activeTopic}`;
+    if (aiEmptyState) aiEmptyState.classList.add("hidden");
+    if (analysisDashboard) analysisDashboard.classList.remove("hidden");
+    if (analysisTopicTitle) analysisTopicTitle.textContent = `Topic: ${AppState.activeTopic}`;
 
     // Render Bias Bars
     const res = AppState.analysisResult;
@@ -638,6 +772,12 @@ function renderAnalysisDashboard() {
     // Render Sensationalism
     sensationalismVal.textContent = `${res.sensationalism}%`;
     sensationalismDesc.textContent = res.sensationalismDesc;
+    const gaugeFill = document.getElementById("gauge-fill-path");
+    if (gaugeFill) {
+        const gaugeLength = 188.4;
+        const fillLength = (res.sensationalism / 100) * gaugeLength;
+        gaugeFill.style.strokeDasharray = `${fillLength} 188.4`;
+    }
 
     // Render Sentiment Indicator
     sentimentScoreVal.textContent = res.sentimentDesc || "Neutral";
@@ -654,6 +794,16 @@ function renderAnalysisDashboard() {
 
     // Render Source Reliability Ledger
     renderSourceReliabilityGrid();
+
+    // Configure follow-up placeholder and render suggested pills
+    if (searchInput) {
+        searchInput.placeholder = "Ask a follow-up about this topic...";
+        searchInput.value = "";
+    }
+    
+    // Generate initial suggested follow-ups
+    const initialSuggestions = generateInitialSuggestions(AppState.activeTopic);
+    renderSuggestedQuestions(initialSuggestions);
 }
 
 // Animate SVG Donut Segments
@@ -831,63 +981,150 @@ function resetSpeakState() {
 }
 
 
-// 10. Export Report Module (Downloads txt file)
+// 10. Export Report Module (Triggers Browser PDF Print Utility)
 function exportAnalysisReport() {
     const res = AppState.analysisResult;
     if (!res) {
         alert("No report data available. Run an analysis first.");
         return;
     }
+    // Triggers high-fidelity printable page view formatted via @media print in style.css
+    window.print();
+}
 
-    let reportText = `======================================================
-                  TRUTHLENS AI REPORT
-======================================================
-Topic Analyzed   : ${AppState.activeTopic.toUpperCase()}
-Date Generated   : ${new Date().toLocaleString()}
-Engine           : Llama-3.3-70B (Azure OpenAI)
-======================================================
+// 11. Navigation & Location Settings Helpers
+function buildLocationString() {
+    const parts = [];
+    if (AppState.location.city) parts.push(AppState.location.city);
+    if (AppState.location.state) parts.push(AppState.location.state);
+    if (AppState.location.country) parts.push(AppState.location.country);
+    return parts.join(" ");
+}
 
-1. MEDIA BIAS DISTRIBUTION:
-----------------------------------
-Left Leaning     : ${res.bias.left}%
-Neutral / Center : ${res.bias.center}%
-Right Leaning    : ${res.bias.right}%
+async function refreshNewsFeed() {
+    const locationString = buildLocationString();
+    // If no active topic, search latest news with location scope
+    const topic = AppState.activeTopic || "latest global news";
+    const query = locationString ? `${topic} ${locationString}` : topic;
+    
+    showLoader("Filtering news feed...");
+    try {
+        AppState.aggregatedArticles = await fetchNewsArticles(query);
+        renderNewsFeed();
+    } catch (e) {
+        console.warn("Failed to filter news feed:", e);
+    } finally {
+        hideLoader();
+    }
+}
 
-2. SENSATIONALISM & TONE INDEX:
-----------------------------------
-Sensationalism Score: ${res.sensationalism}%
-Level Description   : ${res.sensationalismDesc}
-Sentiment Score     : ${res.sentiment !== undefined ? res.sentiment : 0} (Emotional tone -100 to 100)
-Sentiment Rating    : ${res.sentimentDesc || "Neutral"}
+function goHome() {
+    stopSpeaking();
+    AppState.activeTopic = "";
+    AppState.chatHistory = [];
+    
+    if (searchInput) {
+        searchInput.value = "";
+        searchInput.placeholder = "Ask TruthLens...";
+    }
+    
+    if (suggestedQuestions) {
+        suggestedQuestions.innerHTML = "";
+        suggestedQuestions.classList.add("hidden");
+    }
 
-3. UNBIASED EXECUTIVE SUMMARY:
-----------------------------------
-${res.summary_en.map((p, idx) => `[${idx + 1}] ${p}`).join("\n")}
+    if (chatThread) {
+        chatThread.innerHTML = `<div class="chat-placeholder">Ask any follow-up question in the search bar above to start a conversation about this news topic.</div>`;
+    }
+    
+    const centerPane = document.querySelector(".center-content");
+    if (centerPane) {
+        centerPane.classList.remove("has-results");
+    }
+    
+    if (analysisDashboard) {
+        analysisDashboard.classList.add("hidden");
+    }
+    
+    // Clear search values in location inputs if they return home
+    const locationString = buildLocationString();
+    const query = locationString ? `latest global news ${locationString}` : "latest global news";
+    
+    fetchNewsArticles(query).then(articles => {
+        AppState.aggregatedArticles = articles;
+        renderNewsFeed();
+    }).catch(err => console.warn(err));
+}
 
-4. FACT-CHECKED CLAIMS DATABASE:
-----------------------------------
-${res.claims.map((c, idx) => `Claim [${idx + 1}] : ${c.claim}
-Reported By: ${c.reportedBy}
-AI Verdict : ${c.verdict.toUpperCase()}
-Analysis   : ${c.analysis}
-----------------------------------`).join("\n")}
+function showHistory() {
+    if (historyModal) {
+        historyModal.classList.remove("hidden");
+        renderHistoryList();
+    }
+}
 
-5. MEDIA SOURCE RELIABILITY LEDGER:
-----------------------------------
-${res.sources.map((s, idx) => `Source [${idx + 1}] : ${s.source}
-Bias Rating: ${s.bias.toUpperCase()}
-Reliability: ${s.reliability}
-Reason     : ${s.reason}
-----------------------------------`).join("\n")}
+function renderHistoryList() {
+    if (!historyListContainer) return;
+    historyListContainer.innerHTML = "";
+    const historyItems = [];
+    
+    // Scan LocalStorage for saved report caches
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith("truthlens_cache_")) {
+            const topic = key.replace("truthlens_cache_", "");
+            historyItems.push(topic);
+        }
+    }
+    
+    if (historyItems.length === 0) {
+        historyListContainer.innerHTML = `<div class="empty-history">No past searches logged yet.</div>`;
+        return;
+    }
+    
+    historyItems.forEach(topic => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.textContent = topic.toUpperCase();
+        item.addEventListener("click", () => {
+            loadHistoryTopic(topic);
+            if (historyModal) historyModal.classList.add("hidden");
+        });
+        historyListContainer.appendChild(item);
+    });
+}
 
-Generated by TruthLens Dashboard. All Rights Reserved.
-`;
-
-    const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `TruthLens_Report_${AppState.activeTopic.replace(/\s+/g, '_')}.txt`;
-    link.click();
+function loadHistoryTopic(topic) {
+    const cacheKey = `truthlens_cache_${topic.toLowerCase().trim()}`;
+    const cachedResponse = localStorage.getItem(cacheKey);
+    if (cachedResponse) {
+        try {
+            const jsonResult = JSON.parse(cachedResponse);
+            AppState.activeTopic = topic;
+            if (searchInput) searchInput.value = topic;
+            AppState.analysisResult = jsonResult;
+            
+            // Render cached output immediately
+            renderAnalysisDashboard();
+            
+            const centerPane = document.querySelector(".center-content");
+            if (centerPane) {
+                centerPane.classList.add("has-results");
+            }
+            
+            // Refresh articles silently in the background
+            const locationString = buildLocationString();
+            const query = locationString ? `${topic} ${locationString}` : topic;
+            fetchNewsArticles(query).then(articles => {
+                AppState.aggregatedArticles = articles;
+                renderNewsFeed();
+            }).catch(err => console.warn(err));
+            
+        } catch (e) {
+            console.error("Failed to parse history cache:", e);
+            alert("Error loading history item.");
+        }
+    }
 }
 
 
@@ -905,4 +1142,213 @@ function cleanJSONString(str) {
         cleaned = cleaned.replace(/```$/, "").trim();
     }
     return cleaned;
+}
+
+// 12. Conversational Q&A follow-up helpers
+function generateInitialSuggestions(topic) {
+    const cleanTopic = topic.toLowerCase().trim();
+    if (cleanTopic.includes("climate") || cleanTopic.includes("warm")) {
+        return [
+            "What are the immediate economic impacts of these policy delays?",
+            "Which countries are currently leading in carbon offset efficiency?",
+            "How do fossil fuel subsidy levels compare to renewable funding?"
+        ];
+    }
+    if (cleanTopic.includes("inflation") || cleanTopic.includes("econom") || cleanTopic.includes("price")) {
+        return [
+            "How do interest rate hikes directly curb inflation rates?",
+            "Which specific sectors are hit hardest by supply chain issues?",
+            "What is the global outlook for food and energy prices this year?"
+        ];
+    }
+    if (cleanTopic.includes("artificial") || cleanTopic.includes("intelligence") || cleanTopic.includes("ai")) {
+        return [
+            "Will AI completely automate software development jobs soon?",
+            "What are the key copyright and fair use debates in AI model training?",
+            "How are major governments regulating generative AI platforms?"
+        ];
+    }
+    // General fallback suggestions
+    return [
+        `What are the primary conflicting arguments surrounding ${topic}?`,
+        `Are there any recent legislative or policy updates regarding ${topic}?`,
+        `Which major countries or demographics are most affected by ${topic}?`
+    ];
+}
+
+function generateNextSuggestions(question) {
+    // Generate fresh suggested questions based on past interaction
+    const cleanQ = question.toLowerCase().trim();
+    if (cleanQ.includes("climate") || cleanQ.includes("policy") || cleanQ.includes("carbon")) {
+        return [
+            "How do nuclear energy costs compare to solar and wind?",
+            "What is carbon tax pricing and which countries use it?",
+            "What are the carbon neutral deadlines of the top 3 global economies?"
+        ];
+    }
+    if (cleanQ.includes("job") || cleanQ.includes("automate") || cleanQ.includes("dev") || cleanQ.includes("ai")) {
+        return [
+            "How are developers upskilling to work alongside AI models?",
+            "What fields of work are considered AI-safe or automation-resistant?",
+            "What are the privacy risks of uploading code to proprietary AI tools?"
+        ];
+    }
+    return [
+        "Can you provide more statistical data or percentages on this point?",
+        "What are the long-term future projections for this scenario?",
+        "How does public opinion differ from corporate lobbying on this topic?"
+    ];
+}
+
+function renderSuggestedQuestions(suggestions) {
+    if (!suggestedQuestions) return;
+    suggestedQuestions.innerHTML = "";
+    
+    if (!suggestions || suggestions.length === 0) {
+        suggestedQuestions.classList.add("hidden");
+        return;
+    }
+
+    suggestions.forEach(q => {
+        const pill = document.createElement("button");
+        pill.className = "suggested-pill";
+        pill.textContent = q;
+        pill.title = q;
+        pill.addEventListener("click", () => {
+            if (searchInput) {
+                searchInput.value = q;
+                performAnalysis();
+            }
+        });
+        suggestedQuestions.appendChild(pill);
+    });
+    
+    suggestedQuestions.classList.remove("hidden");
+}
+
+function appendChatBubble(sender, text) {
+    if (!chatThread) return;
+    
+    // Remove placeholder on first message
+    const placeholder = chatThread.querySelector(".chat-placeholder");
+    if (placeholder) placeholder.remove();
+    
+    const bubble = document.createElement("div");
+    bubble.className = `chat-bubble ${sender}-bubble`;
+    
+    // Convert newlines in AI text to HTML paragraphs for clean formatting
+    if (sender === "ai") {
+        bubble.innerHTML = text.split("\n\n").map(p => {
+            // Basic markdown list formatter inside bubbles
+            if (p.trim().startsWith("-") || p.trim().startsWith("*")) {
+                const listItems = p.split(/\n[\-\*]\s+/).map(item => item.trim() ? `<li>${escapeHTML(item.trim().replace(/^[\-\*]\s+/, ""))}</li>` : "");
+                return `<ul>${listItems.join("")}</ul>`;
+            }
+            return `<p>${escapeHTML(p.trim())}</p>`;
+        }).join("");
+    } else {
+        bubble.textContent = text;
+    }
+    
+    chatThread.appendChild(bubble);
+    chatThread.scrollTop = chatThread.scrollHeight;
+}
+
+function showChatSpinner() {
+    if (!chatThread) return null;
+    
+    // Remove placeholder if present
+    const placeholder = chatThread.querySelector(".chat-placeholder");
+    if (placeholder) placeholder.remove();
+    
+    const spinner = document.createElement("div");
+    spinner.className = "local-chat-spinner";
+    spinner.innerHTML = `
+        <span>Thinking</span>
+        <div class="chat-dot"></div>
+        <div class="chat-dot"></div>
+        <div class="chat-dot"></div>
+    `;
+    chatThread.appendChild(spinner);
+    chatThread.scrollTop = chatThread.scrollHeight;
+    return spinner;
+}
+
+async function fetchFollowUpAnswer(question) {
+    if (!AppState.azureEndpoint || !AppState.azureKey) {
+        console.warn("Azure endpoints missing, loading mock follow-up reply.");
+        return `I am currently running in offline mock mode. Your follow-up question was: "${question}". Typically, in this state, I would compile a complete synthesis using the context of "${AppState.activeTopic}" and Llama-3.3-70B details to provide a conversational response.`;
+    }
+
+    const summaryText = AppState.analysisResult ? AppState.analysisResult.summary_en.join("\n") : "No summary available.";
+    const followUpPrompt = `
+You are a news analysis assistant. The user is asking a follow-up question about the news topic: "${AppState.activeTopic}".
+Here is the background AI summary of the topic:
+${summaryText}
+
+User's Follow-up Question: "${question}"
+
+Provide a highly detailed, conversational, and unbiased answer to this question. Do not start with generic greetings. Format your output in clean paragraphs or bullet points if needed.
+`;
+
+    const response = await fetch(AppState.azureEndpoint, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "api-key": AppState.azureKey
+        },
+        body: JSON.stringify({
+            messages: [
+                {
+                    role: "user",
+                    content: followUpPrompt
+                }
+            ],
+            model: "Llama-3.3-70B-Instruct"
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Azure API follow-up responded with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.trim();
+}
+
+async function submitFollowUp(question) {
+    const cleanQ = question.trim();
+    if (!cleanQ) return;
+    
+    // Clear search input immediately
+    if (searchInput) searchInput.value = "";
+    
+    // Stop reading aloud if speaking
+    stopSpeaking();
+    
+    // Append user question
+    appendChatBubble("user", cleanQ);
+    
+    // Append spinner
+    const spinner = showChatSpinner();
+    
+    // Hide suggested questions row during load
+    if (suggestedQuestions) suggestedQuestions.classList.add("hidden");
+    
+    try {
+        const reply = await fetchFollowUpAnswer(cleanQ);
+        if (spinner) spinner.remove();
+        
+        // Append AI response
+        appendChatBubble("ai", reply);
+        
+        // Rotate and render next suggestions
+        const nextSuggestions = generateNextSuggestions(cleanQ);
+        renderSuggestedQuestions(nextSuggestions);
+        
+    } catch (e) {
+        console.error("Conversational follow-up failed:", e);
+        if (spinner) spinner.remove();
+        appendChatBubble("ai", `Sorry, I encountered an error while analyzing your follow-up: ${e.message}`);
+    }
 }

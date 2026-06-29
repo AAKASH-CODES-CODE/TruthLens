@@ -11,66 +11,109 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Background Blur Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
     <!-- App Container -->
     <div class="app-container">
         
         <!-- Header -->
-        <header class="app-header glass">
-            <div class="header-logo">
-                <span class="logo-icon">👁️</span>
-                <h1 class="logo-text text-glow">Truth<span class="highlight">Lens</span></h1>
+        <header class="app-header">
+            <div class="header-logo" id="header-logo-btn">
+                <img src="assets/logo.png" alt="TruthLens Logo" class="logo-img">
+                <h1 class="logo-text">Truth<span class="highlight">Lens</span></h1>
             </div>
-            <div class="header-search">
-                <input type="text" id="search-input" placeholder="Search a trending topic (e.g. climate change, global economics)..." autocomplete="off">
-                <button id="search-btn" class="btn-primary">Analyze Topic</button>
+            <div class="header-nav">
+                <button id="home-nav-btn" class="nav-pill-btn" title="Go Home">
+                    <span class="nav-icon">🏠</span> Home
+                </button>
+                <button id="history-nav-btn" class="nav-pill-btn" title="View Search History">
+                    <span class="nav-icon">⏳</span> History
+                </button>
             </div>
         </header>
 
-        <!-- Main Content Area -->
+        <!-- Main Content Area (Three-Column Layout) -->
         <main class="dashboard-layout">
             
-            <!-- Left Panel: Aggregated Articles Source List -->
-            <section class="left-pane glass">
-                <h2 class="section-title">Aggregated News Sources</h2>
-                <p class="section-desc">Real-time coverage articles pulled from multiple global media outlets.</p>
+            <!-- Left Sidebar (20%): Aggregated Daily News Feed -->
+            <aside class="left-sidebar pane">
+                <div class="pane-header-row">
+                    <h2 class="pane-title">Daily Feed</h2>
+                    <button id="toggle-filter-btn" class="pane-icon-btn" title="Location Settings">⚙️</button>
+                </div>
+                <p class="pane-desc">Latest news articles aggregated on the analyzed topic.</p>
+                
+                <!-- Collapsible Location Filter Drawer -->
+                <div id="location-filter-panel" class="location-filter-panel hidden">
+                    <div class="filter-group">
+                        <label for="country-filter">Country:</label>
+                        <input type="text" id="country-filter" placeholder="e.g. India, USA">
+                    </div>
+                    <div class="filter-group">
+                        <label for="state-filter">State:</label>
+                        <input type="text" id="state-filter" placeholder="e.g. Maharashtra, California">
+                    </div>
+                    <div class="filter-group">
+                        <label for="city-filter">City:</label>
+                        <input type="text" id="city-filter" placeholder="e.g. Mumbai, New York">
+                    </div>
+                    <button id="apply-location-btn" class="btn-apply-filter">Apply Location</button>
+                </div>
+                
                 <div id="news-feed" class="news-feed-container">
                     <!-- Default message -->
                     <div class="empty-state">
-                        <span class="empty-icon">📰</span>
-                        <p>No articles loaded. Search for a topic above to aggregate news sources.</p>
+                        <img src="assets/news.png" alt="News Feed Icon" class="empty-img">
+                        <p class="empty-text">No articles loaded. Use the search bar in the center to search for a topic.</p>
                     </div>
                 </div>
-            </section>
+            </aside>
 
-            <!-- Right Panel: AI Unbiased Summary & Fact-Check Dashboard -->
-            <section class="right-pane glass">
-                <h2 class="section-title">AI Bias & Fact-Checking Analysis</h2>
-                
-                <!-- Default empty state -->
-                <div id="ai-empty-state" class="empty-state">
-                    <span class="empty-icon">🤖</span>
-                    <p>Enter a topic and click "Analyze" to run the Google Gemini bias classifier and fact-checking report.</p>
+            <!-- Center Content (65%): Welcome, Gemini-style Search Pill, and AI Dashboards -->
+            <section class="center-content pane">
+                <!-- Welcome Title -->
+                <div class="welcome-container">
+                    <h2 class="welcome-text">Let's investigate, Akash</h2>
                 </div>
 
-                <!-- Analysis results panel (hidden initially) -->
+                <!-- Gemini-style Search Capsule -->
+                <div class="search-capsule-container">
+                    <div class="search-capsule">
+                        <button id="add-key-btn" class="capsule-icon-btn" title="Configure API Credentials">
+                            <span class="btn-plus-icon">+</span>
+                        </button>
+                        <input type="text" id="search-input" placeholder="Ask TruthLens..." autocomplete="off">
+                        <div class="capsule-dropdown-container">
+                            <select id="lang-select" class="capsule-select" title="Translate Summary">
+                                <option value="en">EN</option>
+                                <option value="hi">HI</option>
+                                <option value="es">ES</option>
+                            </select>
+                        </div>
+                        <button id="mic-btn" class="capsule-icon-btn" title="Voice Search">
+                            <svg class="mic-icon" viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"></path>
+                                <path fill="currentColor" d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <!-- Suggested Question Pills -->
+                    <div id="suggested-questions" class="suggested-pill-row hidden">
+                        <!-- Clickable pills populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- AI Analysis Output Dashboard (hidden initially) -->
                 <div id="analysis-dashboard" class="dashboard-content hidden">
                     
-                    <!-- Topic Title & Translation Toggles -->
-                    <div class="analysis-meta">
-                        <h3 id="analysis-topic-title" class="topic-title">Topic: Climate Change</h3>
-                        <div class="translation-controls">
-                            <span class="lang-label">Translate Summary:</span>
-                            <button class="lang-btn active" data-lang="en">EN</button>
-                            <button class="lang-btn" data-lang="hi">हिन्दी</button>
-                            <button class="lang-btn" data-lang="es">ES</button>
-                        </div>
-                    </div>
-
-                    <!-- Metrics Grid: Bias distribution, Clickbait index, Sentiment Index -->
+                    <!-- Metrics Grid: Bias, Sensationalism, Sentiment -->
                     <div class="metrics-grid">
                         
                         <!-- Political Bias Card -->
-                        <div class="metric-card glass-inset">
+                        <div class="metric-card panel-inset">
                             <h4 class="metric-title">Political Bias Distribution</h4>
                             <div class="bias-content-wrapper">
                                 <div class="bias-bars">
@@ -92,7 +135,7 @@
                                 </div>
                                 <div class="bias-chart-container">
                                     <svg class="donut-chart" viewBox="0 0 100 100" width="90" height="90">
-                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255,255,255,0.08)" stroke-width="12"></circle>
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255,255,255,0.06)" stroke-width="12"></circle>
                                         <circle id="donut-left" cx="50" cy="50" r="40" fill="transparent" stroke="#f43f5e" stroke-width="12" stroke-dasharray="0 251.2" stroke-dashoffset="0" transform="rotate(-90 50 50)"></circle>
                                         <circle id="donut-center" cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" stroke-width="12" stroke-dasharray="0 251.2" stroke-dashoffset="0" transform="rotate(-90 50 50)"></circle>
                                         <circle id="donut-right" cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" stroke-width="12" stroke-dasharray="0 251.2" stroke-dashoffset="0" transform="rotate(-90 50 50)"></circle>
@@ -101,17 +144,30 @@
                             </div>
                         </div>
 
-                        <!-- Clickbait and Emotional Charge Index -->
-                        <div class="metric-card glass-inset flex-center">
+                        <!-- Clickbait Sensationalism Gauge -->
+                        <div class="metric-card panel-inset flex-center">
                             <h4 class="metric-title">Sensationalism Index</h4>
                             <div class="radial-gauge-container">
-                                <div class="gauge-value" id="sensationalism-val">0%</div>
-                                <div class="gauge-label" id="sensationalism-desc">Analysing...</div>
+                                <svg class="gauge-svg" viewBox="0 0 100 100" width="100" height="100">
+                                    <path class="gauge-bg-path" d="M 20 80 A 40 40 0 1 1 80 80" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8" stroke-linecap="round"></path>
+                                    <path id="gauge-fill-path" class="gauge-fill-path" d="M 20 80 A 40 40 0 1 1 80 80" fill="none" stroke="url(#gauge-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 188.4" stroke-dashoffset="0"></path>
+                                    <defs>
+                                        <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#10b981"></stop>
+                                            <stop offset="50%" stop-color="#f59e0b"></stop>
+                                            <stop offset="100%" stop-color="#f43f5e"></stop>
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div class="gauge-overlay">
+                                    <div class="gauge-value" id="sensationalism-val">0%</div>
+                                    <div class="gauge-label" id="sensationalism-desc">Analyzing...</div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Sentiment Score and Tone Index -->
-                        <div class="metric-card glass-inset flex-center">
+                        <!-- Sentiment Tone Index -->
+                        <div class="metric-card panel-inset flex-center">
                             <h4 class="metric-title">Sentiment & Tone Index</h4>
                             <div class="sentiment-meter-container">
                                 <div class="sentiment-score" id="sentiment-score-val">Neutral</div>
@@ -125,11 +181,10 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
 
-                    <!-- AI Unbiased Summary (Markdown container) -->
-                    <div class="summary-card glass-inset">
+                    <!-- AI Unbiased Summary (Detailed content) -->
+                    <div class="summary-card panel-inset">
                         <div class="card-header-row">
                             <h4 class="metric-title">The Unbiased Truth (AI Summary)</h4>
                             <div class="action-buttons">
@@ -142,8 +197,16 @@
                         </div>
                     </div>
 
+                    <!-- Conversational Follow-up Q&A Card -->
+                    <div class="chat-card panel-inset">
+                        <h4 class="metric-title">💬 Conversational Follow-up Q&A</h4>
+                        <div id="chat-thread" class="chat-thread-container">
+                            <div class="chat-placeholder">Ask any follow-up question in the search bar above to start a conversation about this news topic.</div>
+                        </div>
+                    </div>
+
                     <!-- Fact-Check Claims Table -->
-                    <div class="fact-check-card glass-inset">
+                    <div class="fact-check-card panel-inset">
                         <h4 class="metric-title">Fact-Checked Claims Database</h4>
                         <div class="table-container">
                             <table class="fact-table">
@@ -161,18 +224,21 @@
                             </table>
                         </div>
                     </div>
-
-                    <!-- Source Reliability Ratings Grid -->
-                    <div class="source-reliability-card glass-inset">
-                        <h4 class="metric-title">🔍 Source Reliability & Bias Ledger</h4>
-                        <div class="sources-grid" id="sources-reliability-grid">
-                            <!-- Populated dynamically -->
-                            <div class="empty-sources-message">No source ratings generated yet.</div>
-                        </div>
-                    </div>
-
                 </div>
+
+                <!-- Welcome/Aura central background element -->
+                <div class="central-glow-aura"></div>
             </section>
+
+            <!-- Right Sidebar (15%): Media Source Reliability & Bias Ledger -->
+            <aside class="right-sidebar pane">
+                <h2 class="pane-title">Source Ledger</h2>
+                <p class="pane-desc">Reliability and bias metrics of individual news outlets.</p>
+                <div id="sources-reliability-grid" class="sources-feed-container">
+                    <!-- Default message -->
+                    <div class="empty-sources-message">No sources analyzed yet.</div>
+                </div>
+            </aside>
 
         </main>
 
@@ -213,6 +279,25 @@
             </div>
         </div>
 
+        <!-- History Drawer Modal -->
+        <div id="history-modal" class="modal-overlay hidden">
+            <div class="modal-content glass">
+                <div class="modal-header">
+                    <h3>⏳ Search History Logs</h3>
+                    <button id="close-history-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-desc">
+                        Select a past topic search to reload the cached AI analysis immediately.
+                    </p>
+                    <div id="history-list-container" class="history-list">
+                        <!-- History links populated dynamically -->
+                        <div class="empty-history">No past searches logged yet.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Global Loader Overlay -->
         <div id="global-loader" class="loader-overlay hidden">
             <div class="loader-content">
@@ -224,6 +309,6 @@
     </div>
 
     <!-- Main Logic Script -->
-    <script src="app.js"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>
