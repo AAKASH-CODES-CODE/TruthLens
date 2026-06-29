@@ -27,10 +27,6 @@
                 <h1 class="logo-text">Truth<span class="highlight">Lens</span></h1>
             </div>
             <div class="header-actions">
-                <div id="connection-status" class="header-status connection-demo" aria-live="polite">
-                    <span class="status-dot"></span>
-                    <span id="connection-status-text">Setup required • Add Azure endpoint, Azure key, and NewsAPI key</span>
-                </div>
                 <div class="header-nav">
                     <button id="home-nav-btn" class="nav-pill-btn" title="Go Home">
                         <i data-lucide="home" class="nav-icon-svg"></i> Home
@@ -59,15 +55,21 @@
                 <div id="location-filter-panel" class="location-filter-panel hidden">
                     <div class="filter-group">
                         <label for="country-filter">Country:</label>
-                        <input type="text" id="country-filter" placeholder="e.g. India, USA">
+                        <select id="country-filter">
+                            <option value="">-- Select Country --</option>
+                        </select>
                     </div>
                     <div class="filter-group">
                         <label for="state-filter">State:</label>
-                        <input type="text" id="state-filter" placeholder="e.g. Maharashtra, California">
+                        <select id="state-filter" disabled>
+                            <option value="">-- Select State --</option>
+                        </select>
                     </div>
                     <div class="filter-group">
-                        <label for="city-filter">City:</label>
-                        <input type="text" id="city-filter" placeholder="e.g. Mumbai, New York">
+                        <label for="city-filter">District / City:</label>
+                        <select id="city-filter" disabled>
+                            <option value="">-- Select District --</option>
+                        </select>
                     </div>
                     <button id="apply-location-btn" class="btn-apply-filter">Apply Location</button>
                 </div>
@@ -96,6 +98,7 @@
                         <span class="hero-badge"><i data-lucide="globe" class="hero-badge-svg"></i> Live feed aggregation</span>
                         <span class="hero-badge"><i data-lucide="bar-chart-2" class="hero-badge-svg"></i> Bias + credibility ledger</span>
                         <span class="hero-badge"><i data-lucide="brain" class="hero-badge-svg"></i> Live Llama summaries</span>
+                        <span class="hero-badge"><i data-lucide="link" class="hero-badge-svg"></i> URL & YouTube analysis</span>
                     </div>
                 </div>
 
@@ -105,7 +108,7 @@
                         <button id="add-key-btn" class="capsule-icon-btn" title="Configure API Credentials">
                             <span class="btn-plus-icon">+</span>
                         </button>
-                        <input type="text" id="search-input" placeholder="Ask TruthLens..." autocomplete="off">
+                        <input type="text" id="search-input" placeholder="Search topic or paste a news/YouTube URL..." autocomplete="off">
                         <div class="capsule-dropdown-container">
                             <select id="lang-select" class="capsule-select" title="Translate Summary">
                                 <option value="en">EN</option>
@@ -220,9 +223,10 @@
                                 </svg>
                                 <div class="gauge-overlay">
                                     <div class="gauge-value" id="sensationalism-val">0%</div>
-                                    <div class="gauge-label" id="sensationalism-desc">Analyzing...</div>
+                                    <div class="gauge-label" id="sensationalism-badge">Low</div>
                                 </div>
                             </div>
+                            <div class="metric-description" id="sensationalism-desc">Analyzing...</div>
                         </div>
 
                         <!-- Sentiment Tone Index -->
@@ -239,6 +243,7 @@
                                     <span>Positive</span>
                                 </div>
                             </div>
+                            <div class="metric-description" id="sentiment-desc">Analyzing...</div>
                         </div>
                     </div>
 
@@ -371,7 +376,7 @@
     </div>
 
     <!-- Main Logic Script -->
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=27"></script>
 </body>
 
 </html>

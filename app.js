@@ -22,6 +22,8 @@ const AppState = {
     pendingAnalysisRequests: new Map(),
     activeAnalysisRequestId: 0,
     latestRenderedSummaryKey: "",
+    dynamicLocationMode: false,
+    countriesData: [],
     domCache: {
         centerPane: null,
         gaugeFill: null
@@ -59,10 +61,12 @@ const donutCenter = document.getElementById("donut-center");
 const donutRight = document.getElementById("donut-right");
 
 const sensationalismVal = document.getElementById("sensationalism-val");
+const sensationalismBadge = document.getElementById("sensationalism-badge");
 const sensationalismDesc = document.getElementById("sensationalism-desc");
 
 const sentimentScoreVal = document.getElementById("sentiment-score-val");
 const sentimentIndicator = document.getElementById("sentiment-indicator");
+const sentimentDesc = document.getElementById("sentiment-desc");
 
 // Content elements
 const unbiasedSummaryContent = document.getElementById("unbiased-summary-content");
@@ -133,7 +137,11 @@ window.addEventListener("DOMContentLoaded", () => {
     if (langSelect) {
         langSelect.addEventListener("change", (e) => {
             AppState.activeLanguage = e.target.value;
-            renderSummarySection();
+            if (AppState.activeTopic) {
+                startNewAnalysis(AppState.activeTopic);
+            } else {
+                renderSummarySection();
+            }
         });
     }
 
@@ -162,6 +170,182 @@ window.addEventListener("DOMContentLoaded", () => {
     if (toggleFilterBtn && locationFilterPanel) {
         toggleFilterBtn.addEventListener("click", () => {
             locationFilterPanel.classList.toggle("hidden");
+        });
+    }
+
+    // Cascading Location Dropdowns Data (Fallback Local Dataset)
+    const locationData = {
+        "India": {
+            "Delhi": ["Central Delhi", "East Delhi", "New Delhi", "North Delhi", "South Delhi"],
+            "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik"],
+            "Uttar Pradesh": ["Lucknow", "Kanpur", "Noida", "Ghaziabad", "Varanasi"],
+            "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Darbhanga"],
+            "Karnataka": ["Bengaluru", "Mysuru", "Hubballi", "Mangaluru", "Belagavi"]
+        },
+        "USA": {
+            "California": ["Los Angeles", "San Francisco", "San Diego", "San Jose", "Sacramento"],
+            "New York": ["New York City", "Buffalo", "Rochester", "Yonkers", "Syracuse"],
+            "Texas": ["Houston", "San Antonio", "Dallas", "Austin", "Fort Worth"],
+            "Florida": ["Miami", "Orlando", "Tampa", "Jacksonville", "Tallahassee"]
+        },
+        "UK": {
+            "England": ["London", "Birmingham", "Manchester", "Leeds", "Liverpool"],
+            "Scotland": ["Edinburgh", "Glasgow", "Aberdeen", "Dundee", "Inverness"],
+            "Wales": ["Cardiff", "Swansea", "Newport", "Bangor", "St Asaph"]
+        }
+    };
+
+    // Load countries dynamically from CountriesNow API or fall back to local dataset
+    async function loadCountries() {
+        try {
+            const res = await fetch("https://countriesnow.space/api/v0.1/countries");
+            if (!res.ok) throw new Error("API responded with error");
+            const json = await res.json();
+            if (json.error) throw new Error(json.msg);
+
+            AppState.dynamicLocationMode = true;
+            AppState.countriesData = json.data || [];
+
+            if (countryFilter) {
+                countryFilter.innerHTML = '<option value="">-- Select Country --</option>';
+                AppState.countriesData.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c.country;
+                    opt.textContent = c.country;
+                    countryFilter.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.warn("CountriesNow API offline, loading curated local fallback:", e.message);
+            AppState.dynamicLocationMode = false;
+            if (countryFilter) {
+                countryFilter.innerHTML = '<option value="">-- Select Country --</option>';
+                Object.keys(locationData).forEach(country => {
+                    const opt = document.createElement("option");
+                    opt.value = country;
+                    opt.textContent = country;
+                    countryFilter.appendChild(opt);
+                });
+            }
+        }
+    }
+
+    loadCountries();
+
+    // Country dropdown selection handler
+    if (countryFilter) {
+        countryFilter.addEventListener("change", async () => {
+            const selectedCountry = countryFilter.value;
+
+            // Reset downstream dropdowns
+            if (stateFilter) {
+                stateFilter.innerHTML = '<option value="">-- Select State --</option>';
+                stateFilter.disabled = !selectedCountry;
+            }
+            if (cityFilter) {
+                cityFilter.innerHTML = '<option value="">-- Select District --</option>';
+                cityFilter.disabled = true;
+            }
+
+            if (!selectedCountry) return;
+
+            if (AppState.dynamicLocationMode) {
+                try {
+                    const res = await fetch("https://countriesnow.space/api/v0.1/countries/states", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ country: selectedCountry })
+                    });
+                    if (!res.ok) throw new Error("States fetch failed");
+                    const json = await res.json();
+                    if (json.error) throw new Error(json.msg);
+
+                    const states = json.data.states || [];
+                    if (states.length === 0) {
+                        // Fallback directly to cities list for countries with no states defined
+                        const countryObj = AppState.countriesData.find(c => c.country === selectedCountry);
+                        if (countryObj && countryObj.cities && cityFilter) {
+                            cityFilter.disabled = false;
+                            countryObj.cities.forEach(city => {
+                                const opt = document.createElement("option");
+                                opt.value = city;
+                                opt.textContent = city;
+                                cityFilter.appendChild(opt);
+                            });
+                        }
+                    } else if (stateFilter) {
+                        states.forEach(state => {
+                            const opt = document.createElement("option");
+                            opt.value = state.name;
+                            opt.textContent = state.name;
+                            stateFilter.appendChild(opt);
+                        });
+                    }
+                } catch (err) {
+                    console.error("Error fetching states:", err);
+                }
+            } else {
+                // Curated fallback mode
+                if (stateFilter && locationData[selectedCountry]) {
+                    Object.keys(locationData[selectedCountry]).forEach(state => {
+                        const opt = document.createElement("option");
+                        opt.value = state;
+                        opt.textContent = state;
+                        stateFilter.appendChild(opt);
+                    });
+                }
+            }
+        });
+    }
+
+    // State dropdown selection handler
+    if (stateFilter) {
+        stateFilter.addEventListener("change", async () => {
+            const selectedCountry = countryFilter ? countryFilter.value : "";
+            const selectedState = stateFilter.value;
+
+            if (cityFilter) {
+                cityFilter.innerHTML = '<option value="">-- Select District --</option>';
+                cityFilter.disabled = !selectedState;
+            }
+
+            if (!selectedCountry || !selectedState) return;
+
+            if (AppState.dynamicLocationMode) {
+                try {
+                    const res = await fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ country: selectedCountry, state: selectedState })
+                    });
+                    if (!res.ok) throw new Error("Cities fetch failed");
+                    const json = await res.json();
+                    if (json.error) throw new Error(json.msg);
+
+                    const cities = json.data || [];
+                    if (cityFilter) {
+                        cities.forEach(city => {
+                            const opt = document.createElement("option");
+                            opt.value = city;
+                            opt.textContent = city;
+                            cityFilter.appendChild(opt);
+                        });
+                    }
+                } catch (err) {
+                    console.error("Error fetching cities:", err);
+                }
+            } else {
+                // Curated fallback mode
+                if (cityFilter && locationData[selectedCountry] && locationData[selectedCountry][selectedState]) {
+                    const cities = locationData[selectedCountry][selectedState] || [];
+                    cities.forEach(city => {
+                        const opt = document.createElement("option");
+                        opt.value = city;
+                        opt.textContent = city;
+                        cityFilter.appendChild(opt);
+                    });
+                }
+            }
         });
     }
 
@@ -401,7 +585,241 @@ async function performAnalysis() {
         return;
     }
 
-    await startNewAnalysis(query);
+    // Detect if user pasted a URL
+    const urlPattern = /^https?:\/\//i;
+    if (urlPattern.test(query)) {
+        await startURLAnalysis(query);
+    } else {
+        await startNewAnalysis(query);
+    }
+}
+
+// --- URL / YouTube Direct Link Analysis ---
+
+function isYouTubeURL(url) {
+    return /(?:youtube\.com\/watch|youtu\.be\/|youtube\.com\/shorts\/)/i.test(url);
+}
+
+function extractYouTubeVideoId(url) {
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
+        /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+        /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+    ];
+    for (const p of patterns) {
+        const m = url.match(p);
+        if (m) return m[1];
+    }
+    return null;
+}
+
+async function fetchHtmlFromURL(url) {
+    let lastError = null;
+
+    // 1. Try corsproxy.io (direct, very fast)
+    try {
+        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+        if (res.ok) return await res.text();
+    } catch (e) {
+        console.warn("corsproxy.io failed:", e.message);
+        lastError = e;
+    }
+
+    // 2. Try allorigins.win JSON wrapper endpoint (highly stable, avoids 522/Cloudflare blocks)
+    try {
+        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        if (res.ok) {
+            const json = await res.json();
+            if (json.contents) return json.contents;
+        }
+    } catch (e) {
+        console.warn("allorigins.win JSON failed:", e.message);
+        lastError = e;
+    }
+
+    // 3. Try codetabs proxy as final fallback
+    try {
+        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
+        if (res.ok) return await res.text();
+    } catch (e) {
+        console.warn("codetabs failed:", e.message);
+        lastError = e;
+    }
+
+    throw lastError || new Error("Failed to fetch URL content through all available CORS proxies.");
+}
+
+async function fetchYouTubeContent(url) {
+    const videoId = extractYouTubeVideoId(url);
+    if (!videoId) throw new Error("Could not extract YouTube video ID from URL.");
+
+    // 1. Get metadata via oEmbed
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const metaRes = await fetch(oembedUrl);
+    let title = "YouTube Video";
+    let author = "Unknown";
+    if (metaRes.ok) {
+        const meta = await metaRes.json();
+        title = meta.title || title;
+        author = meta.author_name || author;
+    }
+
+    // 2. Try to fetch captions/transcript
+    let transcript = "";
+    try {
+        const html = await fetchHtmlFromURL(`https://www.youtube.com/watch?v=${videoId}`);
+        // Extract caption tracks URL from page source
+        const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
+        if (captionMatch) {
+            const tracks = JSON.parse(captionMatch[1]);
+            if (tracks.length > 0) {
+                const captionUrl = tracks[0].baseUrl;
+                const capXml = await fetchHtmlFromURL(captionUrl);
+                // Extract text from XML caption format
+                transcript = capXml.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+            }
+        }
+    } catch (e) {
+        console.warn("Could not fetch YouTube transcript:", e.message);
+    }
+
+    return {
+        type: "youtube",
+        title: title,
+        source: `YouTube - ${author}`,
+        url: url,
+        content: transcript
+            ? `Video Title: ${title}\nChannel: ${author}\n\nTranscript:\n${transcript.slice(0, 6000)}`
+            : `Video Title: ${title}\nChannel: ${author}\n\n(No transcript available. Analysis will be based on title and metadata only.)`,
+        description: `YouTube video by ${author}: ${title}`
+    };
+}
+
+async function fetchURLContent(url) {
+    const html = await fetchHtmlFromURL(url);
+
+    // Parse HTML and extract meaningful text
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    // Extract title
+    const title = doc.querySelector("title")?.textContent?.trim() || "Untitled Page";
+
+    // Extract meta description
+    const metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute("content")
+        || doc.querySelector('meta[property="og:description"]')?.getAttribute("content")
+        || "";
+
+    // Extract main article text from <article>, <main>, or <body> paragraphs
+    let articleText = "";
+    const articleEl = doc.querySelector("article") || doc.querySelector("main") || doc.body;
+    if (articleEl) {
+        const paragraphs = articleEl.querySelectorAll("p");
+        const texts = [];
+        paragraphs.forEach(p => {
+            const t = p.textContent.trim();
+            if (t.length > 30) texts.push(t); // skip tiny/empty paragraphs
+        });
+        articleText = texts.join("\n\n");
+    }
+
+    // Extract source name from og:site_name or domain
+    const siteName = doc.querySelector('meta[property="og:site_name"]')?.getAttribute("content")
+        || new URL(url).hostname.replace("www.", "");
+
+    return {
+        type: "url",
+        title: title,
+        source: siteName,
+        url: url,
+        content: articleText.slice(0, 6000) || metaDesc || title,
+        description: metaDesc || title
+    };
+}
+
+async function startURLAnalysis(url) {
+    const requestId = ++AppState.activeAnalysisRequestId;
+
+    AppState.activeTopic = url;
+    AppState.chatHistory = [];
+    AppState.analysisResult = null;
+    AppState.latestRenderedSummaryKey = "";
+    if (chatCard) {
+        chatCard.classList.add("hidden");
+        chatCard.classList.remove("active");
+    }
+    setInputMode("analyze");
+    updateAnalysisStatusBar(url);
+
+    if (chatThread) {
+        chatThread.innerHTML = `<div class="chat-placeholder">Ask any follow-up question in the search bar above to start a conversation about this article.</div>`;
+    }
+    if (suggestedQuestions) {
+        suggestedQuestions.innerHTML = "";
+        suggestedQuestions.classList.add("hidden");
+    }
+
+    stopSpeaking();
+
+    try {
+        let extracted;
+
+        if (isYouTubeURL(url)) {
+            showLoader("Extracting YouTube video content & transcript...");
+            extracted = await fetchYouTubeContent(url);
+        } else {
+            showLoader("Fetching article content from URL...");
+            extracted = await fetchURLContent(url);
+        }
+
+        if (requestId !== AppState.activeAnalysisRequestId) return;
+
+        // Create a pseudo-article for the news feed and Llama context
+        const pseudoArticle = {
+            title: extracted.title,
+            source: extracted.source,
+            description: extracted.description,
+            url: extracted.url
+        };
+        AppState.aggregatedArticles = [pseudoArticle];
+        renderNewsFeed();
+
+        // Build articles array with full extracted content for Llama
+        const articlesForAI = [{
+            title: extracted.title,
+            source: extracted.source,
+            description: extracted.content
+        }];
+
+        showLoader("Running AI Bias & Fact-Checking Analysis on article...");
+        const topicLabel = extracted.title || url;
+        const normalizedTopic = topicLabel.toLowerCase().trim();
+        const analysisResult = await runAIAnalysis(normalizedTopic, topicLabel, articlesForAI);
+        if (requestId !== AppState.activeAnalysisRequestId) return;
+
+        AppState.analysisResult = analysisResult;
+        renderAnalysisDashboard();
+
+        const centerPane = getCenterPane();
+        if (centerPane) {
+            centerPane.classList.add("has-results");
+        }
+
+        setInputMode("followup");
+        updateAnalysisStatusBar(topicLabel);
+
+    } catch (e) {
+        if (requestId !== AppState.activeAnalysisRequestId) return;
+        console.error("URL Analysis failed:", e);
+        AppState.activeTopic = "";
+        AppState.analysisResult = null;
+        setInputMode("analyze");
+        alert(`URL Analysis Error: ${e.message}`);
+    } finally {
+        if (requestId === AppState.activeAnalysisRequestId) {
+            hideLoader();
+        }
+    }
 }
 
 async function startNewAnalysis(query) {
@@ -490,6 +908,12 @@ function showLoader(msg) {
 
     let stepIdx = 0;
     loaderMessage.textContent = msg || steps[0];
+    
+    // Restart GPU-accelerated CSS animation loop
+    loaderMessage.style.animation = "none";
+    loaderMessage.offsetHeight; // trigger reflow
+    loaderMessage.style.animation = "premium-text-change 3s infinite";
+    
     globalLoader.classList.remove("hidden");
 
     globalLoaderInterval = setInterval(() => {
@@ -499,7 +923,7 @@ function showLoader(msg) {
         } else {
             loaderMessage.textContent = "Synthesizing findings...";
         }
-    }, 1200);
+    }, 3000);
 }
 
 function hideLoader() {
@@ -508,6 +932,9 @@ function hideLoader() {
     if (globalLoaderInterval) {
         clearInterval(globalLoaderInterval);
         globalLoaderInterval = null;
+    }
+    if (loaderMessage) {
+        loaderMessage.style.animation = "none";
     }
     globalLoader.classList.add("hidden");
 }
@@ -612,6 +1039,8 @@ async function runAIAnalysis(normalizedTopic, topicLabel, articles) {
     if (!AppState.azureEndpoint || !AppState.azureKey) {
         throw new Error("Azure endpoint and API key are required for live Llama analysis.");
     }
+    const langNameMap = { "en": "English", "hi": "Hindi", "es": "Spanish" };
+    const activeLangName = langNameMap[AppState.activeLanguage] || "English";
 
     // Build prompt with articles
     const articlesText = articles.map((art, idx) => `
@@ -636,30 +1065,25 @@ You must return a JSON object (strictly raw JSON, do NOT wrap it in markdown cod
     "right": <integer_percentage_of_right_leaning_tone_0_to_100>
   },
   "sensationalism": <integer_percentage_of_clickbait_emotional_charge_0_to_100>,
-  "sensationalismDesc": "<short description of sensationalism level, e.g., Moderate, High, Minimal>",
+  "sensationalismDesc": "<short description of sensationalism level in ${activeLangName}>",
   "sentiment": <integer_sentiment_score_from_-100_to_100>,
-  "sentimentDesc": "<Positive or Negative or Neutral>",
-  "summary_en": [
-    "A concise, detailed summary of the major event reported (2-3 sentences packed with specific facts and figures). Give a clear explanation of what happened.",
-    "A concise bullet point explaining the primary arguments and data presented by left-leaning or progressive sources (2-3 sentences).",
-    "A concise bullet point explaining the primary arguments and data presented by right-leaning or conservative sources (2-3 sentences)."
+  "sentimentDesc": "<Positive or Negative or Neutral in ${activeLangName}>",
+  "summary": [
+    "A concise, detailed summary of the major event reported (2-3 sentences packed with specific facts and figures in ${activeLangName}). Give a clear explanation of what happened.",
+    "A concise bullet point explaining the primary arguments and data presented by left-leaning or progressive sources (2-3 sentences in ${activeLangName}).",
+    "A concise bullet point explaining the primary arguments and data presented by right-leaning or conservative sources (2-3 sentences in ${activeLangName})."
   ],
-  "summary_hi": [
-    "मुख्य घटना का एक संक्षिप्त और विस्तृत सारांश (2-3 वाक्य जिसमें विशिष्ट तथ्य और आंकड़े शामिल हों)। क्या हुआ, इसका स्पष्ट विश्लेषण प्रदान करें।",
-    "वामपंथी या प्रगतिशील स्रोतों द्वारा प्रस्तुत प्राथमिक तर्कों को समझाने वाला एक संक्षिप्त बिंदु (2-3 वाक्य)।",
-    "दक्षिणपंथी या रूढ़िवादी स्रोतों द्वारा प्रस्तुत प्राथमिक व्यावसायिक तर्कों को समझाने वाला एक संक्षिप्त बिंदु (2-3 वाक्य)।"
-  ],
-  "summary_es": [
-    "Un resumen conciso y detallado del evento principal reportado (2-3 frases repletas de hechos y cifras). Brinde una explicación clara de lo sucedido.",
-    "Un punto conciso que explique los argumentos principales presentados por fuentes progresistas (2-3 frases).",
-    "Un punto conciso que explique los argumentos principales presentados por fuentes conservadoras (2-3 frases)."
+  "suggestedFollowUps": [
+    "Suggested follow-up question 1 based on the specific facts/controversies of these articles (written strictly in ${activeLangName})",
+    "Suggested follow-up question 2 (written strictly in ${activeLangName})",
+    "Suggested follow-up question 3 (written strictly in ${activeLangName})"
   ],
   "claims": [
     {
-      "claim": "Specific factual claim reported in the articles",
+      "claim": "Specific factual claim reported in the articles (written in ${activeLangName})",
       "reportedBy": "Source Name",
       "verdict": "true" or "false" or "misleading",
-      "analysis": "Short fact-checked analysis explaining why."
+      "analysis": "Short fact-checked analysis explaining why (written in ${activeLangName})."
     }
   ],
   "sources": [
@@ -668,12 +1092,12 @@ You must return a JSON object (strictly raw JSON, do NOT wrap it in markdown cod
       "url": "Main homepage URL of this news source (e.g. https://www.bbc.com)",
       "bias": "left" or "center" or "right",
       "reliability": "High" or "Mixed" or "Low",
-      "reason": "Short reason explaining reliability rating based on facts."
+      "reason": "Short reason explaining reliability rating based on facts (written in ${activeLangName})."
     }
   ]
 }
 
-Make sure left + center + right in the bias object sum to exactly 100.
+Make sure left + center + right in the bias object sum to exactly 100. Write all free-text fields (summary bullet points, claim, analysis, sensationalismDesc, sentimentDesc, reason) strictly in ${activeLangName}.
     `;
 
     const requestPromise = (async () => {
@@ -756,7 +1180,7 @@ function validateAnalysisPayload(payload) {
     }
 
     const hasBias = payload.bias && typeof payload.bias.left === "number" && typeof payload.bias.center === "number" && typeof payload.bias.right === "number";
-    const hasSummary = Array.isArray(payload.summary_en);
+    const hasSummary = Array.isArray(payload.summary) || Array.isArray(payload.summary_en);
     const hasClaims = Array.isArray(payload.claims);
     const hasSources = Array.isArray(payload.sources);
 
@@ -805,15 +1229,32 @@ function renderAnalysisDashboard() {
             animateDonutChart(res.bias.left, res.bias.center, res.bias.right);
 
             sensationalismVal.textContent = `${res.sensationalism}%`;
-            sensationalismDesc.textContent = res.sensationalismDesc;
+            if (sensationalismBadge) {
+                let rating = "Low";
+                if (res.sensationalism > 60) rating = "High";
+                else if (res.sensationalism > 30) rating = "Moderate";
+                sensationalismBadge.textContent = rating;
+            }
+            if (sensationalismDesc) {
+                sensationalismDesc.textContent = res.sensationalismDesc || "No sensationalism detected.";
+            }
             if (gaugeFill) {
                 const gaugeLength = 188.4;
                 const fillLength = (res.sensationalism / 100) * gaugeLength;
                 gaugeFill.style.strokeDasharray = `${fillLength} 188.4`;
             }
 
-            sentimentScoreVal.textContent = res.sentimentDesc || "Neutral";
+            let sentimentLabel = "Neutral";
             const scoreVal = res.sentiment !== undefined ? res.sentiment : 0;
+            if (scoreVal > 20) sentimentLabel = "Positive";
+            else if (scoreVal < -20) sentimentLabel = "Negative";
+
+            if (sentimentScoreVal) {
+                sentimentScoreVal.textContent = sentimentLabel;
+            }
+            if (sentimentDesc) {
+                sentimentDesc.textContent = res.sentimentDesc || "Neutral tone across articles.";
+            }
             const percentagePos = ((scoreVal + 100) / 200) * 100;
             sentimentIndicator.style.left = `${percentagePos}%`;
         });
@@ -830,7 +1271,7 @@ function renderAnalysisDashboard() {
         searchInput.value = "";
     }
 
-    const initialSuggestions = generateInitialSuggestions(AppState.activeTopic);
+    const initialSuggestions = res.suggestedFollowUps || generateInitialSuggestions(AppState.activeTopic);
     renderSuggestedQuestions(initialSuggestions);
 }
 
@@ -858,9 +1299,7 @@ function renderSummarySection() {
 
     const res = AppState.analysisResult;
 
-    let activeSummary = res.summary_en;
-    if (AppState.activeLanguage === "hi") activeSummary = hasReadableLocalizedSummary(res.summary_hi) ? res.summary_hi : res.summary_en;
-    if (AppState.activeLanguage === "es") activeSummary = hasReadableLocalizedSummary(res.summary_es) ? res.summary_es : res.summary_en;
+    let activeSummary = res.summary || res.summary_en;
 
     if (!activeSummary || activeSummary.length === 0) {
         if (AppState.latestRenderedSummaryKey !== "empty") {
@@ -1216,9 +1655,8 @@ function attemptRepairAnalysisJSON(cleaned) {
             sensationalismDesc: extractStringField(cleaned, "sensationalismDesc", "Unavailable"),
             sentiment: extractNumberField(cleaned, "sentiment", 0),
             sentimentDesc: extractStringField(cleaned, "sentimentDesc", "Neutral"),
-            summary_en: extractStringArrayField(cleaned, "summary_en"),
-            summary_hi: extractStringArrayField(cleaned, "summary_hi"),
-            summary_es: extractStringArrayField(cleaned, "summary_es"),
+            summary: extractStringArrayField(cleaned, "summary") || extractStringArrayField(cleaned, "summary_en"),
+            suggestedFollowUps: extractStringArrayField(cleaned, "suggestedFollowUps"),
             claims: extractObjectArrayField(cleaned, "claims"),
             sources: extractObjectArrayField(cleaned, "sources")
         };
@@ -1454,8 +1892,11 @@ async function fetchFollowUpAnswer(question) {
         throw new Error("Azure endpoint and API key are required for follow-up answers.");
     }
 
+    const langNameMap = { "en": "English", "hi": "Hindi", "es": "Spanish" };
+    const activeLangName = langNameMap[AppState.activeLanguage] || "English";
+
     const summaryText = AppState.analysisResult
-        ? (AppState.analysisResult.summary_en || []).slice(0, 3).join("\n")
+        ? (AppState.analysisResult.summary || AppState.analysisResult.summary_en || []).slice(0, 3).join("\n")
         : "No summary available.";
     const articleContext = (AppState.aggregatedArticles || [])
         .map((art, idx) => `Article ${idx + 1}: ${art.title} | ${art.source} | ${art.description}`)
@@ -1475,7 +1916,16 @@ ${articleContext}
 User follow-up question:
 "${question}"
 
-Write a detailed, readable, well-structured answer. Use short paragraphs and bullet points when helpful. Do not make up facts, quotes, dates, numbers, or claims that are not supported by the provided context.
+Write a detailed, readable, well-structured answer in ${activeLangName}. Use short paragraphs and bullet points when helpful.
+At the very end of your response, output a delimiter block "===SUGGESTIONS===" followed by exactly 3 suggested follow-up questions in ${activeLangName} (each on a new line). Do not wrap the suggestions in any JSON or array brackets.
+
+Example structure:
+[Your detailed answer here]
+
+===SUGGESTIONS===
+First suggested question?
+Second suggested question?
+Third suggested question?
 `;
 
     const response = await fetch(AppState.azureEndpoint, {
@@ -1531,7 +1981,21 @@ async function submitFollowUp(question) {
     if (suggestedQuestions) suggestedQuestions.classList.add("hidden");
 
     try {
-        const reply = await fetchFollowUpAnswer(cleanQ);
+        const rawReply = await fetchFollowUpAnswer(cleanQ);
+
+        let reply = rawReply;
+        let nextSuggestions = [];
+
+        if (rawReply.includes("===SUGGESTIONS===")) {
+            const parts = rawReply.split("===SUGGESTIONS===");
+            reply = parts[0].trim();
+            if (parts[1]) {
+                nextSuggestions = parts[1]
+                    .split("\n")
+                    .map(line => line.replace(/^[-*•\d+.]\s*/, "").trim())
+                    .filter(line => line.length > 3);
+            }
+        }
 
         if (spinner) {
             if (spinner.dataset.intervalId) {
@@ -1541,7 +2005,10 @@ async function submitFollowUp(question) {
         }
 
         appendChatBubble("ai", reply);
-        const nextSuggestions = generateNextSuggestions(cleanQ);
+        
+        if (nextSuggestions.length === 0) {
+            nextSuggestions = generateNextSuggestions(cleanQ);
+        }
         renderSuggestedQuestions(nextSuggestions);
     } catch (e) {
         console.error("Conversational follow-up failed:", e);
