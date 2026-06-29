@@ -838,7 +838,7 @@ async function startURLAnalysis(url) {
 
         // Save to persistent history
         const summaryText = (analysisResult.summary || analysisResult.summary_en || [])[0] || "";
-        saveToHistory(url, AppState.chatHistory, summaryText);
+        saveToHistory(url, AppState.chatHistory, summaryText, analysisResult, AppState.aggregatedArticles);
 
     } catch (e) {
         if (requestId !== AppState.activeAnalysisRequestId) return;
@@ -905,7 +905,7 @@ async function startNewAnalysis(query) {
 
         // Save to persistent history
         const summaryText = (analysisResult.summary || analysisResult.summary_en || [])[0] || "";
-        saveToHistory(query, AppState.chatHistory, summaryText);
+        saveToHistory(query, AppState.chatHistory, summaryText, analysisResult, AppState.aggregatedArticles);
 
     } catch (e) {
         if (requestId !== AppState.activeAnalysisRequestId) return;
@@ -1634,13 +1634,21 @@ function loadSearchHistory() {
     }
 }
 
-function saveToHistory(topic, chatLog, summary) {
+function saveToHistory(topic, chatLog, summary, analysisResult, aggregatedArticles) {
+    // Avoid duplicates by removing existing entry for this topic
+    const existingIndex = AppState.searchHistory.findIndex(e => e.topic === topic);
+    if (existingIndex !== -1) {
+        AppState.searchHistory.splice(existingIndex, 1);
+    }
+
     const entry = {
         id: Date.now(),
         topic: topic,
         timestamp: new Date().toISOString(),
         chatLog: chatLog || [],
-        summary: summary || ""
+        summary: summary || "",
+        analysisResult: analysisResult || null,
+        aggregatedArticles: aggregatedArticles || []
     };
     AppState.searchHistory.unshift(entry); // newest first
     if (AppState.searchHistory.length > 50) AppState.searchHistory.pop(); // cap at 50
@@ -1719,8 +1727,8 @@ function renderHistoryList(drawer) {
         const chatCount = entry.chatLog.filter(m => m.role === "user").length;
 
         return `
-            <div class="history-item" data-idx="${idx}">
-                <div class="history-item-header" onclick="toggleHistoryItem(${idx})">
+            <div class="history-item" data-idx="${idx}" onclick="loadFromHistory(${idx})" style="cursor:pointer;">
+                <div class="history-item-header">
                     <div class="history-item-meta">
                         <span class="history-type-icon">${isUrl ? '<i data-lucide="link" style="width:11px;height:11px;"></i>' : '<i data-lucide="search" style="width:11px;height:11px;"></i>'}</span>
                         <div>
@@ -1730,11 +1738,7 @@ function renderHistoryList(drawer) {
                     </div>
                     <div class="history-item-actions">
                         <button class="history-rerun-btn" onclick="event.stopPropagation(); rerunFromHistory(${idx})" title="Re-analyze"><i data-lucide="refresh-cw" style="width:12px;height:12px;"></i></button>
-                        <i data-lucide="chevron-down" class="history-chevron" id="chevron-${idx}" style="width:14px;height:14px;"></i>
                     </div>
-                </div>
-                <div class="history-chat-log" id="history-log-${idx}" style="display:none;">
-                    ${renderHistoryChatLog(entry)}
                 </div>
             </div>
         `;
@@ -1750,32 +1754,76 @@ function renderHistoryList(drawer) {
     if (window.lucide) lucide.createIcons();
 }
 
-function renderHistoryChatLog(entry) {
-    if (!entry.chatLog || entry.chatLog.length === 0) {
-        if (entry.summary) {
-            return `<div class="history-log-summary">${escapeHTML(entry.summary)}</div>`;
+window.loadFromHistory = function(idx) {
+    const entry = AppState.searchHistory[idx];
+    if (!entry) return;
+
+    // 1. Close history drawer
+    const drawer = document.getElementById("history-drawer");
+    if (drawer) drawer.classList.add("hidden");
+
+    // 2. Restore active topic & data states
+    AppState.activeTopic = entry.topic;
+    AppState.chatHistory = entry.chatLog || [];
+    AppState.analysisResult = entry.analysisResult || null;
+    AppState.aggregatedArticles = entry.aggregatedArticles || [];
+    AppState.latestRenderedSummaryKey = "";
+
+    // 3. Render news feed sidebar
+    renderNewsFeed();
+
+    // 4. Render main analysis dashboard or fallback to fresh run
+    if (AppState.analysisResult) {
+        renderAnalysisDashboard();
+        const centerPane = getCenterPane();
+        if (centerPane) {
+            centerPane.classList.add("has-results");
         }
-        return `<div class="history-log-empty">No follow-up conversation recorded.</div>`;
+        setInputMode("followup");
+        updateAnalysisStatusBar(entry.topic);
+    } else {
+        // Fallback: rerun if no analysisResult was saved previously
+        if (searchInput) searchInput.value = entry.topic;
+        const urlPattern = /^https?:\/\//i;
+        if (urlPattern.test(entry.topic)) {
+            startURLAnalysis(entry.topic);
+        } else {
+            startNewAnalysis(entry.topic);
+        }
+        return;
     }
 
-    return entry.chatLog.map(msg => {
-        const isUser = msg.role === "user";
-        return `
-            <div class="history-msg ${isUser ? "history-msg-user" : "history-msg-ai"}">
-                <span class="history-msg-label">${isUser ? "You" : "AI"}</span>
-                <p class="history-msg-text">${escapeHTML(msg.content)}</p>
-            </div>
-        `;
-    }).join("");
-}
+    // 5. Restore chat history bubbles in chat card
+    if (chatCard) {
+        if (AppState.chatHistory.length > 0) {
+            chatCard.classList.remove("hidden");
+            chatCard.classList.add("active");
+        } else {
+            chatCard.classList.add("hidden");
+            chatCard.classList.remove("active");
+        }
+    }
 
-window.toggleHistoryItem = function(idx) {
-    const log = document.getElementById(`history-log-${idx}`);
-    const chevron = document.getElementById(`chevron-${idx}`);
-    if (!log) return;
-    const isOpen = log.style.display !== "none";
-    log.style.display = isOpen ? "none" : "block";
-    if (chevron) chevron.style.transform = isOpen ? "" : "rotate(180deg)";
+    if (chatThread) {
+        if (AppState.chatHistory.length === 0) {
+            chatThread.innerHTML = `<div class="chat-placeholder">Ask any follow-up question in the search bar above to start a conversation about this news topic.</div>`;
+        } else {
+            chatThread.innerHTML = "";
+            AppState.chatHistory.forEach(msg => {
+                appendChatBubble(msg.role === "user" ? "user" : "ai", msg.content);
+            });
+        }
+    }
+
+    // 6. Generate appropriate suggested questions
+    let suggestions = [];
+    if (AppState.chatHistory.length > 0) {
+        const lastUserMsg = [...AppState.chatHistory].reverse().find(m => m.role === "user");
+        suggestions = generateNextSuggestions(lastUserMsg ? lastUserMsg.content : entry.topic);
+    } else {
+        suggestions = generateInitialSuggestions(entry.topic);
+    }
+    renderSuggestedQuestions(suggestions);
 };
 
 window.rerunFromHistory = function(idx) {
@@ -2155,11 +2203,11 @@ ${articleContext}
 User follow-up question:
 "${question}"
 
-Write a detailed, readable, well-structured answer in ${activeLangName}. Use short paragraphs and bullet points when helpful.
+Answer the user's question directly, clearly, and concisely in ${activeLangName}. Keep the length of the response natural and proportional to the complexity of the question: for simple questions keep it brief and short, and use bullet points or brief paragraphs only when necessary for complex inquiries.
 At the very end of your response, output a delimiter block "===SUGGESTIONS===" followed by exactly 3 suggested follow-up questions in ${activeLangName} (each on a new line). Do not wrap the suggestions in any JSON or array brackets.
 
 Example structure:
-[Your detailed answer here]
+[Your concise answer here]
 
 ===SUGGESTIONS===
 First suggested question?

@@ -38,11 +38,11 @@ ${articleContext}
 User follow-up question:
 "${question}"
 
-Write a detailed, readable, well-structured answer in ${activeLangName}. Use short paragraphs and bullet points when helpful.
+Answer the user's question directly, clearly, and concisely in ${activeLangName}. Keep the length of the response natural and proportional to the complexity of the question: for simple questions keep it brief and short, and use bullet points or brief paragraphs only when necessary for complex inquiries.
 At the very end of your response, output a delimiter block "===SUGGESTIONS===" followed by exactly 3 suggested follow-up questions in ${activeLangName} (each on a new line). Do not wrap the suggestions in any JSON or array brackets.
 
 Example structure:
-[Your detailed answer here]
+[Your concise answer here]
 
 ===SUGGESTIONS===
 First suggested question?
