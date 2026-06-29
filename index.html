@@ -17,8 +17,44 @@
 </head>
 
 <body>
+    <div id="login-screen" class="login-screen-overlay">
+        <div class="login-screen-glow login-screen-glow-left"></div>
+        <div class="login-screen-glow login-screen-glow-right"></div>
+        <div class="login-screen-card glass">
+            <div class="login-brand-row">
+                <img src="assets/logo.png" alt="TruthLens Logo" class="login-logo-img">
+                <div>
+                    <h2 class="login-title">Truth<span class="highlight">Lens</span> Control Gate</h2>
+                </div>
+            </div>
+            <div class="login-role-chip">
+                <i data-lucide="shield-check"></i>
+                <span>Judge access ready for hackathon review</span>
+            </div>
+
+            <div class="login-actions-stack">
+                <button id="judge-login-btn" class="judge-login-btn" type="button">
+                    <span class="judge-login-copy">
+                        <strong>Judge Login</strong>
+                        <small>Direct reviewer access to the main dashboard</small>
+                    </span>
+                    <i data-lucide="arrow-right"></i>
+                </button>
+
+                <div class="login-divider"><span>or continue with</span></div>
+
+                <button id="google-login-btn" class="google-login-btn" type="button">
+                    <span class="google-mark" aria-hidden="true">G</span>
+                    <span>Login with Google</span>
+                </button>
+            </div>
+
+            <p class="login-footnote">Demo login for prototype flow. You can later connect real auth if needed.</p>
+        </div>
+    </div>
+
     <!-- App Container -->
-    <div class="app-container">
+    <div id="main-app" class="app-container app-locked">
 
         <!-- Header -->
         <header class="app-header">
@@ -33,6 +69,9 @@
                     </button>
                     <button id="history-nav-btn" class="nav-pill-btn" title="View Search History">
                         <i data-lucide="history" class="nav-icon-svg"></i> History
+                    </button>
+                    <button id="logout-nav-btn" class="nav-pill-btn" title="Log Out">
+                        <i data-lucide="log-out" class="nav-icon-svg"></i> Logout
                     </button>
                 </div>
             </div>
@@ -346,25 +385,6 @@
             </div>
         </div>
 
-        <!-- History Drawer Modal -->
-        <div id="history-modal" class="modal-overlay hidden">
-            <div class="modal-content glass">
-                <div class="modal-header">
-                    <h3><i data-lucide="history" class="modal-header-svg"></i> Search History Logs</h3>
-                    <button id="close-history-btn" class="close-btn">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p class="modal-desc">
-                        Saved replay history is disabled. Run a fresh live analysis to investigate a topic.
-                    </p>
-                    <div id="history-list-container" class="history-list">
-                        <!-- History links populated dynamically -->
-                        <div class="empty-history">No past searches logged yet.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Global Loader Overlay -->
         <div id="global-loader" class="loader-overlay hidden">
             <div class="loader-content">
@@ -376,7 +396,7 @@
     </div>
 
     <!-- Main Logic Script -->
-    <script src="app.js?v=27"></script>
+    <script src="app.js?v=32"></script>
 </body>
 
 </html>

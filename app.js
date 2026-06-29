@@ -16,6 +16,7 @@ const AppState = {
     synth: window.speechSynthesis,
     utterance: null,
     chatHistory: [], // Stores history list for the conversational follow-up
+    searchHistory: [], // Stores saved history entries [{id, topic, timestamp, chatLog, summary}]
     newsCache: new Map(),
     analysisCache: new Map(),
     pendingNewsRequests: new Map(),
@@ -44,9 +45,7 @@ const globalLoader = document.getElementById("global-loader");
 const loaderMessage = document.getElementById("loader-message");
 
 const newsFeed = document.getElementById("news-feed");
-const aiEmptyState = document.getElementById("ai-empty-state"); // Might be null in new layout
 const analysisDashboard = document.getElementById("analysis-dashboard");
-const analysisTopicTitle = document.getElementById("analysis-topic-title"); // Might be null in new layout
 
 // Metrics elements
 const biasLeft = document.getElementById("bias-left");
@@ -81,8 +80,6 @@ const modeAnalyzeBtn = document.getElementById("mode-analyze-btn");
 const modeFollowupBtn = document.getElementById("mode-followup-btn");
 const newTopicBtn = document.getElementById("new-topic-btn");
 const searchHelperText = document.getElementById("search-helper-text");
-const connectionStatus = document.getElementById("connection-status");
-const connectionStatusText = document.getElementById("connection-status-text");
 const analysisStatusBar = document.getElementById("analysis-status-bar");
 const currentTopicLabel = document.getElementById("current-topic-label");
 const currentModeLabel = document.getElementById("current-mode-label");
@@ -91,9 +88,6 @@ const currentModeLabel = document.getElementById("current-mode-label");
 const headerLogoBtn = document.getElementById("header-logo-btn");
 const homeNavBtn = document.getElementById("home-nav-btn");
 const historyNavBtn = document.getElementById("history-nav-btn");
-const historyModal = document.getElementById("history-modal");
-const closeHistoryBtn = document.getElementById("close-history-btn");
-const historyListContainer = document.getElementById("history-list-container");
 const chatCard = document.querySelector(".chat-card");
 
 const toggleFilterBtn = document.getElementById("toggle-filter-btn");
@@ -105,6 +99,12 @@ const applyLocationBtn = document.getElementById("apply-location-btn");
 
 const suggestedQuestions = document.getElementById("suggested-questions");
 const chatThread = document.getElementById("chat-thread");
+const judgeLoginBtn = document.getElementById("judge-login-btn");
+const googleLoginBtn = document.getElementById("google-login-btn");
+const loginScreen = document.getElementById("login-screen");
+const mainApp = document.getElementById("main-app");
+const logoutNavBtn = document.getElementById("logout-nav-btn");
+const LOGIN_STORAGE_KEY = "truthlens_demo_login_role";
 
 function getCenterPane() {
     if (!AppState.domCache.centerPane) {
@@ -120,9 +120,44 @@ function getGaugeFill() {
     return AppState.domCache.gaugeFill;
 }
 
+function initializeLoginGate() {
+    const savedRole = localStorage.getItem(LOGIN_STORAGE_KEY);
+
+    if (savedRole) {
+        unlockDashboardAccess(savedRole);
+    } else {
+        lockDashboardAccess();
+    }
+
+    if (judgeLoginBtn) {
+        judgeLoginBtn.addEventListener("click", () => unlockDashboardAccess("judge"));
+    }
+
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener("click", () => unlockDashboardAccess("google"));
+    }
+}
+
+function lockDashboardAccess() {
+    if (loginScreen) loginScreen.classList.remove("hidden");
+    if (mainApp) mainApp.classList.add("app-locked");
+}
+
+function unlockDashboardAccess(role) {
+    localStorage.setItem(LOGIN_STORAGE_KEY, role);
+    if (loginScreen) loginScreen.classList.add("hidden");
+    if (mainApp) mainApp.classList.remove("app-locked");
+    if (window.lucide && typeof lucide.createIcons === "function") {
+        lucide.createIcons();
+    }
+}
+
 // 3. Initialize App & Load Keys
 window.addEventListener("DOMContentLoaded", () => {
+    initializeLoginGate();
     loadKeys();
+    loadSearchHistory();
+    renderHistoryBadge();
     setInputMode("analyze");
     if (window.lucide) {
         lucide.createIcons();
@@ -159,7 +194,14 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // History navigation listener
     if (historyNavBtn) historyNavBtn.addEventListener("click", showHistory);
-    if (closeHistoryBtn && historyModal) closeHistoryBtn.addEventListener("click", () => historyModal.classList.add("hidden"));
+
+    // Logout listener
+    if (logoutNavBtn) {
+        logoutNavBtn.addEventListener("click", () => {
+            localStorage.removeItem(LOGIN_STORAGE_KEY);
+            lockDashboardAccess();
+        });
+    }
 
     // Search mode controls
     if (modeAnalyzeBtn) modeAnalyzeBtn.addEventListener("click", () => setInputMode("analyze"));
@@ -393,8 +435,6 @@ function loadKeys() {
     if (azureEndpointInput) azureEndpointInput.value = AppState.azureEndpoint;
     if (azureKeyInput) azureKeyInput.value = AppState.azureKey;
     if (newsKeyInput) newsKeyInput.value = AppState.newsKey;
-
-    updateConnectionStatus();
 }
 
 // 4. Modal Event Listeners
@@ -423,7 +463,6 @@ function saveKeys() {
     AppState.azureKey = aKey;
     AppState.newsKey = nKey;
 
-    updateConnectionStatus();
     hideModal();
     alert("API credentials saved. TruthLens status has been updated.");
 }
@@ -433,36 +472,12 @@ window.addEventListener("click", (e) => {
     if (settingsModal && e.target === settingsModal) {
         hideModal();
     }
-    if (historyModal && e.target === historyModal) {
-        historyModal.classList.add("hidden");
-    }
 
     const newsCard = e.target.closest?.(".news-card");
     if (newsCard?.dataset?.url) {
         window.open(newsCard.dataset.url, "_blank", "noopener,noreferrer");
     }
 });
-
-function updateConnectionStatus() {
-    if (!connectionStatus || !connectionStatusText) return;
-
-    connectionStatus.classList.remove("connection-live", "connection-hybrid", "connection-demo");
-
-    if (AppState.newsKey && AppState.azureEndpoint && AppState.azureKey) {
-        connectionStatus.classList.add("connection-live");
-        connectionStatusText.textContent = "Live mode • NewsAPI + Llama AI connected";
-        return;
-    }
-
-    if (AppState.azureEndpoint && AppState.azureKey) {
-        connectionStatus.classList.add("connection-hybrid");
-        connectionStatusText.textContent = "AI ready • Connect NewsAPI for live news feed";
-        return;
-    }
-
-    connectionStatus.classList.add("connection-demo");
-    connectionStatusText.textContent = "Setup required • Add Azure endpoint and key to start live AI analysis";
-}
 
 function setInputMode(mode) {
     const canUseFollowup = Boolean(AppState.activeTopic && AppState.analysisResult);
@@ -808,6 +823,10 @@ async function startURLAnalysis(url) {
         setInputMode("followup");
         updateAnalysisStatusBar(topicLabel);
 
+        // Save to persistent history
+        const summaryText = (analysisResult.summary || analysisResult.summary_en || [])[0] || "";
+        saveToHistory(url, AppState.chatHistory, summaryText);
+
     } catch (e) {
         if (requestId !== AppState.activeAnalysisRequestId) return;
         console.error("URL Analysis failed:", e);
@@ -870,6 +889,10 @@ async function startNewAnalysis(query) {
 
         setInputMode("followup");
         updateAnalysisStatusBar(query);
+
+        // Save to persistent history
+        const summaryText = (analysisResult.summary || analysisResult.summary_en || [])[0] || "";
+        saveToHistory(query, AppState.chatHistory, summaryText);
 
     } catch (e) {
         if (requestId !== AppState.activeAnalysisRequestId) return;
@@ -951,43 +974,45 @@ async function fetchNewsArticles(query) {
         return AppState.pendingNewsRequests.get(normalizedQuery);
     }
 
-    if (!AppState.newsKey) {
-        throw new Error("NewsAPI key is required for live news results.");
-    }
-
     const requestPromise = (async () => {
-        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=6&sortBy=relevancy&language=en&apiKey=${AppState.newsKey}`;
-
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`NewsAPI responded with status ${response.status}`);
+        let response;
+        if (!AppState.newsKey) {
+            // No local key configured, try Netlify Serverless Function fallback
+            const functionUrl = `/.netlify/functions/news?q=${encodeURIComponent(query)}`;
+            response = await fetch(functionUrl);
+            if (!response.ok) {
+                throw new Error("NewsAPI key is required. Serverless function returned error: " + response.statusText);
+            }
+            return await response.json();
+        } else {
+            // Direct browser fetch
+            const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=6&sortBy=relevancy&language=en&apiKey=${AppState.newsKey}`;
+            response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`NewsAPI responded with status ${response.status}`);
+            }
+            const data = await response.json();
+            if (data.status !== "ok") {
+                throw new Error(data.message || "NewsAPI returned an error");
+            }
+            if (!data.articles || data.articles.length === 0) {
+                throw new Error("No live articles found matching this topic.");
+            }
+            return data.articles.map((art) => ({
+                title: art.title,
+                source: art.source?.name || "Unknown Source",
+                description: art.description || "No description available.",
+                url: art.url
+            }));
         }
-
-    const data = await response.json();
-
-        if (data.status !== "ok") {
-            throw new Error(data.message || "NewsAPI returned an error");
-        }
-
-        if (!data.articles || data.articles.length === 0) {
-            throw new Error("No live articles found matching this topic.");
-        }
-
-        const mappedArticles = data.articles.map((art) => ({
-            title: art.title,
-            source: art.source?.name || "Unknown Source",
-            description: art.description || "No description available.",
-            url: art.url
-        }));
-
-        AppState.newsCache.set(normalizedQuery, mappedArticles);
-        return mappedArticles;
     })();
 
     AppState.pendingNewsRequests.set(normalizedQuery, requestPromise);
 
     try {
-        return await requestPromise;
+        const result = await requestPromise;
+        AppState.newsCache.set(normalizedQuery, result);
+        return result;
     } finally {
         AppState.pendingNewsRequests.delete(normalizedQuery);
     }
@@ -1036,20 +1061,37 @@ async function runAIAnalysis(normalizedTopic, topicLabel, articles) {
         return AppState.pendingAnalysisRequests.get(normalizedTopic);
     }
 
-    if (!AppState.azureEndpoint || !AppState.azureKey) {
-        throw new Error("Azure endpoint and API key are required for live Llama analysis.");
-    }
     const langNameMap = { "en": "English", "hi": "Hindi", "es": "Spanish" };
     const activeLangName = langNameMap[AppState.activeLanguage] || "English";
 
-    // Build prompt with articles
-    const articlesText = articles.map((art, idx) => `
+    const requestPromise = (async () => {
+        let responseText;
+
+        if (!AppState.azureEndpoint || !AppState.azureKey) {
+            // No local keys configured, try Netlify Serverless Function fallback
+            const res = await fetch("/.netlify/functions/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    topicLabel: topicLabel,
+                    articles: articles,
+                    lang: AppState.activeLanguage
+                })
+            });
+            if (!res.ok) {
+                throw new Error("Azure credentials are required. Serverless function returned error: " + res.statusText);
+            }
+            const data = await res.json();
+            responseText = data.content;
+        } else {
+            // Build prompt with articles
+            const articlesText = articles.map((art, idx) => `
 Article [${idx + 1}]:
 Title: ${art.title}
 Source: ${art.source}
 Description: ${art.description}
 `).join("\n");
-    const prompt = `
+            const prompt = `
 You are a professional news bias classifier and fact-checking AI agent. 
 Read these news articles gathered on the topic: "${topicLabel}" and perform a bias audit and fact-check.
 
@@ -1098,71 +1140,74 @@ You must return a JSON object (strictly raw JSON, do NOT wrap it in markdown cod
 }
 
 Make sure left + center + right in the bias object sum to exactly 100. Write all free-text fields (summary bullet points, claim, analysis, sensationalismDesc, sentimentDesc, reason) strictly in ${activeLangName}.
-    `;
+`;
 
-    const requestPromise = (async () => {
-        const url = AppState.azureEndpoint;
+            const url = AppState.azureEndpoint;
+            const maxRetries = 3;
+            const retryDelayMs = 1500;
+            let lastError = null;
+            let success = false;
 
-        // Retry settings on 503/429 errors
-        const maxRetries = 3;
-        const retryDelayMs = 1500;
-        let lastError = null;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "api-key": AppState.azureKey
+                        },
+                        body: JSON.stringify({
+                            messages: [
+                                {
+                                    role: "system",
+                                    content: "You are a professional news bias classifier and fact-checking AI agent. Return only valid raw JSON with double-quoted keys and strings. Do not include markdown, comments, or trailing commas."
+                                },
+                                {
+                                    role: "user",
+                                    content: prompt
+                                }
+                            ],
+                            model: "Llama-3.3-70B-Instruct",
+                            max_tokens: 3000,
+                            temperature: 0.1
+                        })
+                    });
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "api-key": AppState.azureKey
-                    },
-                    body: JSON.stringify({
-                        messages: [
-                            {
-                                role: "system",
-                                content: "You are a professional news bias classifier and fact-checking AI agent. Return only valid raw JSON with double-quoted keys and strings. Do not include markdown, comments, or trailing commas."
-                            },
-                            {
-                                role: "user",
-                                content: prompt
-                            }
-                        ],
-                        model: "Llama-3.3-70B-Instruct",
-                        max_tokens: 3000,
-                        temperature: 0.1
-                    })
-                });
+                    if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
+                        console.warn(`Azure API busy (Status ${response.status}). Retrying attempt ${attempt + 1}/${maxRetries} in ${retryDelayMs}ms...`);
+                        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+                        continue;
+                    }
 
-                if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
-                    console.warn(`Azure API busy (Status ${response.status}). Retrying attempt ${attempt + 1}/${maxRetries} in ${retryDelayMs}ms...`);
-                    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-                    continue;
+                    if (!response.ok) {
+                        throw new Error(`Azure API responded with status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    responseText = extractModelText(data);
+                    if (!responseText) {
+                        console.error("Azure raw response:", data);
+                        throw new Error("Azure AI returned an empty or invalid response.");
+                    }
+                    success = true;
+                    break;
+                } catch (e) {
+                    lastError = e;
+                    console.error(`Attempt ${attempt} failed:`, e.message);
+                    if (attempt < maxRetries) {
+                        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+                    }
                 }
+            }
 
-                if (!response.ok) {
-                    throw new Error(`Azure API responded with status ${response.status}`);
-                }
-
-                const data = await response.json();
-                const responseText = extractModelText(data);
-                if (!responseText) {
-                    console.error("Azure raw response:", data);
-                    throw new Error("Azure AI returned an empty or invalid response.");
-                }
-
-                const jsonResult = parseAnalysisResponse(responseText);
-                validateAnalysisPayload(jsonResult);
-                return jsonResult;
-            } catch (e) {
-                lastError = e;
-                console.error(`Attempt ${attempt} failed:`, e.message);
-                if (attempt < maxRetries) {
-                    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-                }
+            if (!success) {
+                throw new Error(lastError?.message || "Live AI analysis failed after multiple attempts.");
             }
         }
 
-        throw new Error(lastError?.message || "Live AI analysis failed after multiple attempts.");
+        const jsonResult = parseAnalysisResponse(responseText);
+        validateAnalysisPayload(jsonResult);
+        return jsonResult;
     })();
 
     AppState.pendingAnalysisRequests.set(normalizedTopic, requestPromise);
@@ -1191,9 +1236,7 @@ function validateAnalysisPayload(payload) {
 
 // 8. Render Dashboard Output Elements
 function renderAnalysisDashboard() {
-    if (aiEmptyState) aiEmptyState.classList.add("hidden");
     if (analysisDashboard) analysisDashboard.classList.remove("hidden");
-    if (analysisTopicTitle) analysisTopicTitle.textContent = `Topic: ${AppState.activeTopic}`;
 
     const res = AppState.analysisResult;
     if (!res) return;
@@ -1565,21 +1608,184 @@ function goHome() {
     }).catch(err => console.warn(err));
 }
 
-function showHistory() {
-    if (historyModal) {
-        historyModal.classList.remove("hidden");
-        renderHistoryList();
+// ---- History System ----
+
+function loadSearchHistory() {
+    try {
+        const saved = localStorage.getItem("truthlens_history");
+        if (saved) AppState.searchHistory = JSON.parse(saved);
+    } catch (e) {
+        AppState.searchHistory = [];
     }
 }
 
-function renderHistoryList() {
-    if (!historyListContainer) return;
-    historyListContainer.innerHTML = `<div class="empty-history">Saved history has been disabled. Run a fresh live analysis each time.</div>`;
+function saveToHistory(topic, chatLog, summary) {
+    const entry = {
+        id: Date.now(),
+        topic: topic,
+        timestamp: new Date().toISOString(),
+        chatLog: chatLog || [],
+        summary: summary || ""
+    };
+    AppState.searchHistory.unshift(entry); // newest first
+    if (AppState.searchHistory.length > 50) AppState.searchHistory.pop(); // cap at 50
+    try {
+        localStorage.setItem("truthlens_history", JSON.stringify(AppState.searchHistory));
+    } catch (e) {
+        console.warn("Could not save history:", e);
+    }
+    // Update badge count
+    renderHistoryBadge();
 }
 
-function loadHistoryTopic() {
-    alert("Saved history playback is disabled. Please run a fresh live analysis.");
+function renderHistoryBadge() {
+    if (!historyNavBtn) return;
+    const count = AppState.searchHistory.length;
+    let badge = historyNavBtn.querySelector(".history-badge");
+    if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "history-badge";
+        historyNavBtn.appendChild(badge);
+    }
+    badge.textContent = count;
+    badge.style.display = count > 0 ? "inline-flex" : "none";
 }
+
+function showHistory() {
+    // Toggle slide-in drawer anchored to the history button
+    let drawer = document.getElementById("history-drawer");
+    if (drawer) {
+        const isOpen = !drawer.classList.contains("hidden");
+        if (isOpen) {
+            drawer.classList.add("hidden");
+            return;
+        }
+    } else {
+        drawer = document.createElement("div");
+        drawer.id = "history-drawer";
+        drawer.className = "history-drawer";
+        document.querySelector(".app-header").appendChild(drawer);
+    }
+    renderHistoryList(drawer);
+    drawer.classList.remove("hidden");
+
+    // Close drawer when clicking outside
+    const closeOutside = (e) => {
+        if (!drawer.contains(e.target) && e.target !== historyNavBtn && !historyNavBtn.contains(e.target)) {
+            drawer.classList.add("hidden");
+            document.removeEventListener("click", closeOutside, true);
+        }
+    };
+    setTimeout(() => document.addEventListener("click", closeOutside, true), 100);
+}
+
+function renderHistoryList(drawer) {
+    if (!drawer) return;
+    const history = AppState.searchHistory;
+
+    if (history.length === 0) {
+        drawer.innerHTML = `
+            <div class="history-drawer-header">
+                <span><i data-lucide="history" style="width:14px;height:14px;"></i> Search History</span>
+                <button class="history-clear-btn" onclick="clearHistory()">Clear All</button>
+            </div>
+            <div class="history-empty">No searches yet. Start an investigation!</div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    const items = history.map((entry, idx) => {
+        const date = new Date(entry.timestamp);
+        const timeStr = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + " " +
+            date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+        const isUrl = /^https?:\/\//i.test(entry.topic);
+        const topicDisplay = isUrl ? new URL(entry.topic).hostname : entry.topic;
+        const chatCount = entry.chatLog.filter(m => m.role === "user").length;
+
+        return `
+            <div class="history-item" data-idx="${idx}">
+                <div class="history-item-header" onclick="toggleHistoryItem(${idx})">
+                    <div class="history-item-meta">
+                        <span class="history-type-icon">${isUrl ? '<i data-lucide="link" style="width:11px;height:11px;"></i>' : '<i data-lucide="search" style="width:11px;height:11px;"></i>'}</span>
+                        <div>
+                            <p class="history-topic">${escapeHTML(topicDisplay)}</p>
+                            <p class="history-time">${timeStr} &bull; ${chatCount} follow-up${chatCount !== 1 ? "s" : ""}</p>
+                        </div>
+                    </div>
+                    <div class="history-item-actions">
+                        <button class="history-rerun-btn" onclick="event.stopPropagation(); rerunFromHistory(${idx})" title="Re-analyze"><i data-lucide="refresh-cw" style="width:12px;height:12px;"></i></button>
+                        <i data-lucide="chevron-down" class="history-chevron" id="chevron-${idx}" style="width:14px;height:14px;"></i>
+                    </div>
+                </div>
+                <div class="history-chat-log" id="history-log-${idx}" style="display:none;">
+                    ${renderHistoryChatLog(entry)}
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    drawer.innerHTML = `
+        <div class="history-drawer-header">
+            <span><i data-lucide="history" style="width:14px;height:14px;"></i> Search History (${history.length})</span>
+            <button class="history-clear-btn" onclick="clearHistory()">Clear All</button>
+        </div>
+        <div class="history-items-list">${items}</div>
+    `;
+    if (window.lucide) lucide.createIcons();
+}
+
+function renderHistoryChatLog(entry) {
+    if (!entry.chatLog || entry.chatLog.length === 0) {
+        if (entry.summary) {
+            return `<div class="history-log-summary">${escapeHTML(entry.summary)}</div>`;
+        }
+        return `<div class="history-log-empty">No follow-up conversation recorded.</div>`;
+    }
+
+    return entry.chatLog.map(msg => {
+        const isUser = msg.role === "user";
+        return `
+            <div class="history-msg ${isUser ? "history-msg-user" : "history-msg-ai"}">
+                <span class="history-msg-label">${isUser ? "You" : "AI"}</span>
+                <p class="history-msg-text">${escapeHTML(msg.content)}</p>
+            </div>
+        `;
+    }).join("");
+}
+
+window.toggleHistoryItem = function(idx) {
+    const log = document.getElementById(`history-log-${idx}`);
+    const chevron = document.getElementById(`chevron-${idx}`);
+    if (!log) return;
+    const isOpen = log.style.display !== "none";
+    log.style.display = isOpen ? "none" : "block";
+    if (chevron) chevron.style.transform = isOpen ? "" : "rotate(180deg)";
+};
+
+window.rerunFromHistory = function(idx) {
+    const entry = AppState.searchHistory[idx];
+    if (!entry) return;
+    // Close the drawer
+    const drawer = document.getElementById("history-drawer");
+    if (drawer) drawer.classList.add("hidden");
+    // Re-run fresh live analysis (no cache)
+    if (searchInput) searchInput.value = entry.topic;
+    const urlPattern = /^https?:\/\//i;
+    if (urlPattern.test(entry.topic)) {
+        startURLAnalysis(entry.topic);
+    } else {
+        startNewAnalysis(entry.topic);
+    }
+};
+
+window.clearHistory = function() {
+    AppState.searchHistory = [];
+    try { localStorage.removeItem("truthlens_history"); } catch(e) {}
+    renderHistoryBadge();
+    const drawer = document.getElementById("history-drawer");
+    if (drawer) renderHistoryList(drawer);
+};
 
 
 // 11. Utilities Helper
@@ -1888,12 +2094,29 @@ function showChatSpinner() {
 }
 
 async function fetchFollowUpAnswer(question) {
-    if (!AppState.azureEndpoint || !AppState.azureKey) {
-        throw new Error("Azure endpoint and API key are required for follow-up answers.");
-    }
-
     const langNameMap = { "en": "English", "hi": "Hindi", "es": "Spanish" };
     const activeLangName = langNameMap[AppState.activeLanguage] || "English";
+
+    if (!AppState.azureEndpoint || !AppState.azureKey) {
+        // No local keys configured, try Netlify Serverless Function fallback
+        const response = await fetch("/.netlify/functions/followup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                question: question,
+                topic: AppState.activeTopic,
+                chatHistory: AppState.chatHistory,
+                summary: AppState.analysisResult ? (AppState.analysisResult.summary || AppState.analysisResult.summary_en || []) : [],
+                articles: AppState.aggregatedArticles,
+                lang: AppState.activeLanguage
+            })
+        });
+        if (!response.ok) {
+            throw new Error("Azure credentials are required. Serverless function returned error: " + response.statusText);
+        }
+        const data = await response.json();
+        return data.content;
+    }
 
     const summaryText = AppState.analysisResult
         ? (AppState.analysisResult.summary || AppState.analysisResult.summary_en || []).slice(0, 3).join("\n")
@@ -1976,6 +2199,7 @@ async function submitFollowUp(question) {
 
     stopSpeaking();
     appendChatBubble("user", cleanQ);
+    AppState.chatHistory.push({ role: "user", content: cleanQ });
 
     const spinner = showChatSpinner();
     if (suggestedQuestions) suggestedQuestions.classList.add("hidden");
@@ -2005,7 +2229,11 @@ async function submitFollowUp(question) {
         }
 
         appendChatBubble("ai", reply);
+        AppState.chatHistory.push({ role: "ai", content: reply });
         
+        // Sync follow-up chat log back to search history entry
+        updateHistoryChatLog();
+
         if (nextSuggestions.length === 0) {
             nextSuggestions = generateNextSuggestions(cleanQ);
         }
@@ -2021,6 +2249,19 @@ async function submitFollowUp(question) {
         }
 
         appendChatBubble("ai", `I could not complete the live follow-up analysis. Reason: ${e.message}`);
+    }
+}
+
+function updateHistoryChatLog() {
+    if (!AppState.activeTopic) return;
+    const entry = AppState.searchHistory.find(e => e.topic === AppState.activeTopic);
+    if (entry) {
+        entry.chatLog = [...AppState.chatHistory];
+        try {
+            localStorage.setItem("truthlens_history", JSON.stringify(AppState.searchHistory));
+        } catch (e) {
+            console.warn("Could not update history chat log:", e);
+        }
     }
 }
 
