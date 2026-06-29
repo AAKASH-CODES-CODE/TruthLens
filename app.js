@@ -60,13 +60,7 @@ const AppState = {
 // 2. DOM Selectors
 const searchInput = document.getElementById("search-input");
 const searchBtn = document.getElementById("search-btn"); // Might be null in new layout
-const settingsBtn = document.getElementById("add-key-btn"); // Point to the plus button
-const settingsModal = document.getElementById("settings-modal");
-const closeModalBtn = document.getElementById("close-modal-btn");
-const saveKeysBtn = document.getElementById("save-keys-btn");
-const azureEndpointInput = document.getElementById("azure-endpoint-input");
-const azureKeyInput = document.getElementById("azure-key-input");
-const newsKeyInput = document.getElementById("news-key-input");
+
 const globalLoader = document.getElementById("global-loader");
 const loaderMessage = document.getElementById("loader-message");
 
@@ -219,7 +213,6 @@ async function unlockDashboardAccess(role, displayName) {
 // 3. Initialize App & Load Keys
 window.addEventListener("DOMContentLoaded", async () => {
     initializeLoginGate();
-    loadKeys();
     await loadSearchHistory();
     renderHistoryBadge();
     setInputMode("analyze");
@@ -478,12 +471,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadInitialTrendingNews() {
-    if (!AppState.newsKey) {
-        AppState.aggregatedArticles = [];
-        renderNewsFeed();
-        return;
-    }
-
     try {
         const defaultArticles = await fetchNewsArticles("latest global news");
         AppState.aggregatedArticles = defaultArticles;
@@ -495,51 +482,8 @@ async function loadInitialTrendingNews() {
     }
 }
 
-function loadKeys() {
-    AppState.azureEndpoint = localStorage.getItem("truthlens_azure_endpoint") || AppState.azureEndpoint;
-    AppState.azureKey = localStorage.getItem("truthlens_azure_key") || AppState.azureKey;
-    AppState.newsKey = localStorage.getItem("truthlens_news_key") || AppState.newsKey;
-
-    if (azureEndpointInput) azureEndpointInput.value = AppState.azureEndpoint;
-    if (azureKeyInput) azureKeyInput.value = AppState.azureKey;
-    if (newsKeyInput) newsKeyInput.value = AppState.newsKey;
-}
-
-// 4. Modal Event Listeners
-if (settingsBtn) settingsBtn.addEventListener("click", showModal);
-if (closeModalBtn) closeModalBtn.addEventListener("click", hideModal);
-if (saveKeysBtn) saveKeysBtn.addEventListener("click", saveKeys);
-
-function showModal() {
-    if (settingsModal) settingsModal.classList.remove("hidden");
-}
-
-function hideModal() {
-    if (settingsModal) settingsModal.classList.add("hidden");
-}
-
-function saveKeys() {
-    const endPoint = azureEndpointInput.value.trim();
-    const aKey = azureKeyInput.value.trim();
-    const nKey = newsKeyInput.value.trim();
-
-    localStorage.setItem("truthlens_azure_endpoint", endPoint);
-    localStorage.setItem("truthlens_azure_key", aKey);
-    localStorage.setItem("truthlens_news_key", nKey);
-
-    AppState.azureEndpoint = endPoint;
-    AppState.azureKey = aKey;
-    AppState.newsKey = nKey;
-
-    hideModal();
-    alert("API credentials saved. TruthLens status has been updated.");
-}
-
 // Close modal if user clicks outside of the modal box
 window.addEventListener("click", (e) => {
-    if (settingsModal && e.target === settingsModal) {
-        hideModal();
-    }
 
     const newsCard = e.target.closest?.(".news-card");
     if (newsCard?.dataset?.url) {
@@ -932,43 +876,14 @@ async function startURLAnalysis(url) {
 
 async function autoCorrectSpelling(query) {
     try {
-        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        let responseText;
-
-        if (!isLocalhost || !AppState.azureEndpoint || !AppState.azureKey) {
-            // Live hosted site or no local keys, use Netlify Serverless Function proxy
-            const res = await fetch("/.netlify/functions/correct", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: query })
-            });
-            if (!res.ok) return null;
-            const data = await res.json();
-            responseText = data.corrected;
-        } else {
-            const response = await fetch(AppState.azureEndpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "api-key": AppState.azureKey
-                },
-                body: JSON.stringify({
-                    messages: [
-                        {
-                            role: "user",
-                            content: `Correct any spelling mistakes or typos in this search term so it works well for a news search engine: '${query}'. Return ONLY the corrected search term. Do not write anything else, no explanations, no quotes.`
-                        }
-                    ],
-                    model: "Llama-3.3-70B-Instruct",
-                    max_tokens: 50,
-                    temperature: 0.1
-                })
-            });
-            if (!response.ok) return null;
-            const data = await response.json();
-            responseText = extractModelText(data);
-        }
-
+        const res = await fetch("/.netlify/functions/correct", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query })
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const responseText = data.corrected;
         return responseText ? responseText.replace(/['"‘“’”.]/g, "").trim() : null;
     } catch (e) {
         console.warn("Spelling auto-correction failed:", e.message);
@@ -1139,53 +1054,13 @@ async function fetchNewsArticles(query) {
         return AppState.pendingNewsRequests.get(normalizedQuery);
     }
 
-    // Secondary backup keys
-    const backupKeys = [];
-
     const requestPromise = (async () => {
-        let response;
-        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        if (!isLocalhost) {
-            // Live hosted site, use Netlify Serverless Function proxy
-            const functionUrl = `/.netlify/functions/news?q=${encodeURIComponent(query)}`;
-            response = await fetch(functionUrl);
-            if (!response.ok) {
-                throw new Error("NewsAPI key is required. Serverless function returned error: " + response.statusText);
-            }
-            return await response.json();
-        } else {
-            // Direct browser fetch on localhost - Try all keys sequentially if one fails
-            let lastError = null;
-            const keysToTry = [AppState.newsKey, ...backupKeys.filter(k => k !== AppState.newsKey)];
-            
-            for (const key of keysToTry) {
-                if (!key) continue;
-                try {
-                    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=6&sortBy=relevancy&language=en&apiKey=${key}`;
-                    response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`Status ${response.status}: ${response.statusText}`);
-                    }
-                    const data = await response.json();
-                    if (data.status !== "ok") {
-                        throw new Error(data.message || "NewsAPI error");
-                    }
-                    if (!data.articles || data.articles.length === 0) {
-                        throw new Error("No live articles found matching this topic.");
-                    }
-                    return data.articles.map((art) => ({
-                        title: art.title,
-                        source: art.source?.name || "Unknown Source",
-                        description: art.description || "No description available.",
-                        url: art.url
-                    }));
-                } catch (e) {
-                    console.warn(`Local API Key ${key.slice(0, 5)}... failed. Error: ${e.message}`);
-                    lastError = e;
-                }
-            }
-            throw lastError || new Error("All local NewsAPI keys failed.");
+        const functionUrl = `/.netlify/functions/news?q=${encodeURIComponent(query)}`;
+        const response = await fetch(functionUrl);
+        if (!response.ok) {
+            throw new Error("Serverless function returned error: " + response.statusText);
         }
+        return await response.json();
     })();
 
     AppState.pendingNewsRequests.set(normalizedQuery, requestPromise);
@@ -1272,148 +1147,20 @@ async function runAIAnalysis(normalizedTopic, topicLabel, articles) {
     const activeLangName = langNameMap[AppState.activeLanguage] || "English";
 
     const requestPromise = (async () => {
-        let responseText;
-
-        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        if (!isLocalhost || !AppState.azureEndpoint || !AppState.azureKey) {
-            // Live hosted site or no local keys, use Netlify Serverless Function proxy
-            const res = await fetch("/.netlify/functions/analyze", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    topicLabel: topicLabel,
-                    articles: articles,
-                    lang: AppState.activeLanguage
-                })
-            });
-            if (!res.ok) {
-                throw new Error("Azure credentials are required. Serverless function returned error: " + res.statusText);
-            }
-            const data = await res.json();
-            responseText = data.content;
-        } else {
-            // Build prompt with articles
-            const articlesText = articles.map((art, idx) => `
-Article [${idx + 1}]:
-Title: ${art.title}
-Source: ${art.source}
-Description: ${art.description}
-`).join("\n");
-            const prompt = `
-You are a professional news bias classifier and fact-checking AI agent. 
-Read these news articles gathered on the topic: "${topicLabel}" and perform a bias audit and fact-check.
-
-Articles Data:
-${articlesText}
-
-Analyze the bias of these sources combined.
-You must return a JSON object (strictly raw JSON, do NOT wrap it in markdown code blocks like \`\`\`json, just start with { and end with }). Use this structure exactly:
-{
-  "bias": {
-    "left": <integer_percentage_of_left_leaning_tone_0_to_100>,
-    "center": <integer_percentage_of_neutral_tone_0_to_100>,
-    "right": <integer_percentage_of_right_leaning_tone_0_to_100>
-  },
-  "sensationalism": <integer_percentage_of_clickbait_emotional_charge_0_to_100>,
-  "sensationalismDesc": "<short description of sensationalism level in ${activeLangName}>",
-  "sentiment": <integer_sentiment_score_from_-100_to_100>,
-  "sentimentDesc": "<Positive or Negative or Neutral in ${activeLangName}>",
-  "summary": [
-    "A concise, detailed summary of the major event reported (2-3 sentences packed with specific facts and figures in ${activeLangName}). Give a clear explanation of what happened.",
-    "A concise bullet point explaining the primary arguments and data presented by left-leaning or progressive sources (2-3 sentences in ${activeLangName}).",
-    "A concise bullet point explaining the primary arguments and data presented by right-leaning or conservative sources (2-3 sentences in ${activeLangName})."
-  ],
-  "suggestedFollowUps": [
-    "Suggested follow-up question 1 based on the specific facts/controversies of these articles (written strictly in ${activeLangName})",
-    "Suggested follow-up question 2 (written strictly in ${activeLangName})",
-    "Suggested follow-up question 3 (written strictly in ${activeLangName})"
-  ],
-  "claims": [
-    {
-      "claim": "Specific factual claim reported in the articles (written in ${activeLangName})",
-      "reportedBy": "Source Name",
-      "verdict": "true" or "false" or "misleading",
-      "analysis": "Short fact-checked analysis explaining why (written in ${activeLangName})."
-    }
-  ],
-  "sources": [
-    {
-      "source": "Source Name (e.g. BBC News)",
-      "url": "Main homepage URL of this news source (e.g. https://www.bbc.com)",
-      "bias": "left" or "center" or "right",
-      "reliability": "High" or "Mixed" or "Low",
-      "reason": "Short reason explaining reliability rating based on facts (written in ${activeLangName})."
-    }
-  ]
-}
-
-Make sure left + center + right in the bias object sum to exactly 100. Write all free-text fields (summary bullet points, claim, analysis, sensationalismDesc, sentimentDesc, reason) strictly in ${activeLangName}.
-`;
-
-            const url = AppState.azureEndpoint;
-            const maxRetries = 3;
-            const retryDelayMs = 1500;
-            let lastError = null;
-            let success = false;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    const response = await fetch(url, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "api-key": AppState.azureKey
-                        },
-                        body: JSON.stringify({
-                            messages: [
-                                {
-                                    role: "system",
-                                    content: "You are a professional news bias classifier and fact-checking AI agent. Return only valid raw JSON with double-quoted keys and strings. Do not include markdown, comments, or trailing commas."
-                                },
-                                {
-                                    role: "user",
-                                    content: prompt
-                                }
-                            ],
-                            model: "Llama-3.3-70B-Instruct",
-                            max_tokens: 3000,
-                            temperature: 0.1
-                        })
-                    });
-
-                    if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
-                        console.warn(`Azure API busy (Status ${response.status}). Retrying attempt ${attempt + 1}/${maxRetries} in ${retryDelayMs}ms...`);
-                        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-                        continue;
-                    }
-
-                    if (!response.ok) {
-                        throw new Error(`Azure API responded with status ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    responseText = extractModelText(data);
-                    if (!responseText) {
-                        console.error("Azure raw response:", data);
-                        throw new Error("Azure AI returned an empty or invalid response.");
-                    }
-                    success = true;
-                    break;
-                } catch (e) {
-                    lastError = e;
-                    console.error(`Attempt ${attempt} failed:`, e.message);
-                    if (attempt < maxRetries) {
-                        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-                    }
-                }
-            }
-
-            if (!success) {
-                throw new Error(lastError?.message || "Live AI analysis failed after multiple attempts.");
-            }
+        const res = await fetch("/.netlify/functions/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                topicLabel: topicLabel,
+                articles: articles,
+                lang: AppState.activeLanguage
+            })
+        });
+        if (!res.ok) {
+            throw new Error("Serverless function returned error: " + res.statusText);
         }
-
-        const jsonResult = parseAnalysisResponse(responseText);
+        const data = await res.json();
+        const jsonResult = parseAnalysisResponse(data.content);
         validateAnalysisPayload(jsonResult);
         return jsonResult;
     })();
@@ -2389,97 +2136,23 @@ function showChatSpinner() {
 }
 
 async function fetchFollowUpAnswer(question) {
-    const langNameMap = { "en": "English", "hi": "Hindi", "es": "Spanish" };
-    const activeLangName = langNameMap[AppState.activeLanguage] || "English";
-
-    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    if (!isLocalhost || !AppState.azureEndpoint || !AppState.azureKey) {
-        // Live hosted site or no local keys, use Netlify Serverless Function proxy
-        const response = await fetch("/.netlify/functions/followup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                question: question,
-                topic: AppState.activeTopic,
-                chatHistory: AppState.chatHistory,
-                summary: AppState.analysisResult ? (AppState.analysisResult.summary || AppState.analysisResult.summary_en || []) : [],
-                articles: AppState.aggregatedArticles,
-                lang: AppState.activeLanguage
-            })
-        });
-        if (!response.ok) {
-            throw new Error("Azure credentials are required. Serverless function returned error: " + response.statusText);
-        }
-        const data = await response.json();
-        return data.content;
-    }
-
-    const summaryText = AppState.analysisResult
-        ? (AppState.analysisResult.summary || AppState.analysisResult.summary_en || []).slice(0, 3).join("\n")
-        : "No summary available.";
-    const articleContext = (AppState.aggregatedArticles || [])
-        .map((art, idx) => `Article ${idx + 1}: ${art.title} | ${art.source} | ${art.description}`)
-        .join("\n");
-    const followUpPrompt = `
-You are a careful news analysis assistant. Answer only from the provided investigation context.
-If the available evidence is insufficient, say that clearly instead of inventing facts.
-
-Current topic: "${AppState.activeTopic}"
-
-Background summary:
-${summaryText}
-
-Related live articles:
-${articleContext}
-
-User follow-up question:
-"${question}"
-
-Answer the user's question directly, clearly, and concisely in ${activeLangName}. Keep the length of the response natural and proportional to the complexity of the question: for simple questions keep it brief and short, and use bullet points or brief paragraphs only when necessary for complex inquiries.
-At the very end of your response, output a delimiter block "===SUGGESTIONS===" followed by exactly 3 suggested follow-up questions in ${activeLangName} (each on a new line). Do not wrap the suggestions in any JSON or array brackets.
-
-Example structure:
-[Your concise answer here]
-
-===SUGGESTIONS===
-First suggested question?
-Second suggested question?
-Third suggested question?
-`;
-
-    const response = await fetch(AppState.azureEndpoint, {
+    const response = await fetch("/.netlify/functions/followup", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "api-key": AppState.azureKey
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            messages: [
-                {
-                    role: "system",
-                    content: "You are an expert news analyst. Be precise, transparent about uncertainty, and never fabricate missing facts."
-                },
-                {
-                    role: "user",
-                    content: followUpPrompt
-                }
-            ],
-            model: "Llama-3.3-70B-Instruct",
-            max_tokens: 1200,
-            temperature: 0.2
+            question: question,
+            topic: AppState.activeTopic,
+            chatHistory: AppState.chatHistory,
+            summary: AppState.analysisResult ? (AppState.analysisResult.summary || AppState.analysisResult.summary_en || []) : [],
+            articles: AppState.aggregatedArticles,
+            lang: AppState.activeLanguage
         })
     });
-
     if (!response.ok) {
-        throw new Error(`Azure API follow-up responded with status ${response.status}`);
+        throw new Error("Serverless function returned error: " + response.statusText);
     }
-
     const data = await response.json();
-    const reply = extractModelText(data);
-    if (!reply) {
-        throw new Error("Azure AI returned an empty follow-up response.");
-    }
-    return reply;
+    return data.content;
 }
 
 async function submitFollowUp(question) {

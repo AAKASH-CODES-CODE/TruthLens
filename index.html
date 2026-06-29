@@ -142,9 +142,6 @@
                 <!-- Gemini-style Search Capsule -->
                 <div class="search-capsule-container">
                     <div class="search-capsule">
-                        <button id="add-key-btn" class="capsule-icon-btn" title="Configure API Credentials">
-                            <span class="btn-plus-icon">+</span>
-                        </button>
                         <input type="text" id="search-input" placeholder="Search topic or paste a news/YouTube URL..." autocomplete="off">
                         <div class="capsule-dropdown-container">
                             <select id="lang-select" class="capsule-select" title="Translate Summary">
@@ -344,44 +341,7 @@
 
         </main>
 
-        <!-- API Settings Configuration Modal -->
-        <div id="settings-modal" class="modal-overlay hidden">
-            <div class="modal-content glass">
-                <div class="modal-header">
-                    <h3><i data-lucide="settings" class="modal-header-svg"></i> Configure API Credentials</h3>
-                    <button id="close-modal-btn" class="close-btn">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p class="modal-desc">
-                        Add your <strong>NewsAPI</strong> and <strong>Azure AI Studio</strong> credentials to enable live news retrieval and live Llama analysis. This app is now configured for live results only.
-                    </p>
 
-                    <div class="input-group">
-                        <label for="azure-endpoint-input">Azure Endpoint URL:</label>
-                        <input type="text" id="azure-endpoint-input"
-                            placeholder="https://.../openai/v1/chat/completions">
-                        <small>Copy the Target URI from your Azure AI Studio deployment.</small>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="azure-key-input">Azure API Key:</label>
-                        <input type="password" id="azure-key-input" placeholder="BPcPvL...">
-                        <small>Copy Key 1 from your Azure AI Studio deployment.</small>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="news-key-input">NewsAPI Key:</label>
-                        <input type="password" id="news-key-input" placeholder="8b5c9...">
-                        <small>Get a free key from <a href="https://newsapi.org/" target="_blank"
-                                rel="noreferrer">NewsAPI.org</a>.</small>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button id="save-keys-btn" class="btn-primary">Save API Credentials</button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Global Loader Overlay -->
         <div id="global-loader" class="loader-overlay hidden">
@@ -397,7 +357,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <!-- Main Logic Script -->
-    <script src="app.js?v=43"></script>
+    <script src="app.js?v=45"></script>
 </body>
 
 </html>
